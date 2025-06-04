@@ -1,0 +1,66 @@
+# Core Python Data Stack
+numpy
+pandas
+scipy
+matplotlib
+seaborn
+plotly
+
+# Time Series & Econometrics
+statsmodels
+arch
+pmdarima
+
+# Machine Learning
+scikit-learn
+xgboost
+lightgbm
+mlflow
+
+# Deep Learning
+tensorflow
+torch
+keras
+transformers
+sentencepiece
+
+# Optimization
+cvxpy
+cvxopt
+
+# NLP
+nltk
+spacy
+beautifulsoup4
+newspaper3k
+gensim
+
+# API / Data Ingestion
+yfinance
+alpaca-trade-api
+requests
+aiohttp
+
+# Databases
+SQLAlchemy
+psycopg2-binary
+pymongo
+
+# Web Dashboard / API
+dash
+dash-bootstrap-components
+fastapi
+uvicorn
+
+# Experiment Tracking & Notebooks
+jupyter
+notebook
+ipykernel
+ipywidgets
+
+# DevOps & Util
+python-dotenv
+black
+flake8
+pre-commit
+tqdm

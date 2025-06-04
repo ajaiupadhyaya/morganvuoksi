@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints
+.venv/
+.env
+*.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs and Data
+*.log
+*.csv
+*.tsv
+*.parquet
+*.pkl
+*.db
+*.sqlite
+*.feather
+data/
+logs/
+outputs/
+cache/
+
+# Environment and Build
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# MLflow and Tracking
+mlruns/
+.wandb/
+
+# Notebooks runtime
+*.nbconvert.ipynb
