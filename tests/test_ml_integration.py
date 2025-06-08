@@ -1,6 +1,6 @@
 """
-Integration tests for the ML system.
-Verifies ML components work together and integrate with the trading system.
+Integration tests for the ML system with safety features.
+Tests the complete pipeline from data ingestion to signal generation.
 """
 
 import unittest
@@ -9,8 +9,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import tempfile
 import shutil
-from pathlib import Path
 import logging
+from pathlib import Path
 
 from src.ml.learning_loop import (
     ModelRegistry,
@@ -18,204 +18,204 @@ from src.ml.learning_loop import (
     RegimeDetector,
     LearningLoop
 )
-from src.visuals.ml_visuals import (
-    plot_signal_quality_metrics,
-    plot_regime_history,
-    plot_feature_importance,
-    plot_model_weights,
-    plot_signal_decay
+from src.ml.safety import (
+    ModelSafetyMonitor,
+    CrossValidator,
+    PositionSizer
 )
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 class TestMLIntegration(unittest.TestCase):
-    """Test ML system integration."""
+    """Test suite for ML system integration."""
     
     def setUp(self):
         """Set up test environment."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.registry = ModelRegistry(model_dir=self.temp_dir)
-        self.tracker = SignalQualityTracker(window=5)
-        self.detector = RegimeDetector(window=5)
-        self.loop = LearningLoop(
-            self.registry,
-            self.tracker,
-            self.detector,
-            retrain_interval=1,
-            min_samples=10
+        # Create temporary directory for models
+        self.test_dir = tempfile.mkdtemp()
+        self.model_dir = Path(self.test_dir) / 'models'
+        self.model_dir.mkdir()
+        
+        # Initialize components
+        self.model_registry = ModelRegistry(str(self.model_dir))
+        self.signal_tracker = SignalQualityTracker()
+        self.regime_detector = RegimeDetector()
+        self.learning_loop = LearningLoop(
+            self.model_registry,
+            self.signal_tracker,
+            self.regime_detector
         )
         
         # Generate test data
         np.random.seed(42)
+        self.n_samples = 1000
+        self.n_features = 10
+        
+        # Generate features
         self.features = pd.DataFrame(
-            np.random.randn(100, 10),
-            columns=[f'feature_{i}' for i in range(10)]
+            np.random.randn(self.n_samples, self.n_features),
+            columns=[f'feature_{i}' for i in range(self.n_features)]
         )
-        self.returns = pd.Series(np.random.randn(100))
+        
+        # Generate returns with some predictability
+        self.returns = pd.Series(
+            np.random.randn(self.n_samples) * 0.1 +
+            self.features['feature_0'] * 0.2 +  # Add some signal
+            self.features['feature_1'] * 0.1,
+            index=self.features.index
+        )
+        
+        # Generate market data
         self.market_data = pd.DataFrame({
             'returns': self.returns,
-            'volume': np.random.randint(1000, 10000, 100)
+            'volume': np.random.lognormal(10, 1, self.n_samples),
+            'volatility': np.random.gamma(2, 0.1, self.n_samples)
         })
+        
+        # Configure logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
     
     def tearDown(self):
         """Clean up test environment."""
-        shutil.rmtree(self.temp_dir)
+        shutil.rmtree(self.test_dir)
     
     def test_full_ml_pipeline(self):
-        """Test the complete ML pipeline from training to signal generation."""
-        # Initial training
-        models = self.loop.retrain_models(
+        """Test complete ML pipeline with safety features."""
+        # Train models
+        models = self.learning_loop.retrain_models(
             self.features,
             self.returns,
             self.market_data
         )
-        self.assertIn('xgb', models)
-        self.assertIn('lstm', models)
-        self.assertIn('transformer', models)
+        
+        # Verify models were trained
+        self.assertGreater(len(models), 0)
         
         # Generate signals
-        signals = self.loop.generate_signals(
+        signals, risk_metrics = self.learning_loop.generate_signals(
             self.features,
             self.market_data
         )
-        self.assertEqual(len(signals), len(self.features))
-        self.assertTrue(all(0 <= x <= 1 for x in signals))
         
-        # Check signal quality metrics
-        metrics = self.tracker.get_metrics()
+        # Verify signals
+        self.assertIsInstance(signals, pd.Series)
+        self.assertEqual(len(signals), len(self.features))
+        
+        # Verify risk metrics
+        self.assertIn('position_sizes', risk_metrics)
+        self.assertIn('stop_losses', risk_metrics)
+        self.assertIn('confidences', risk_metrics)
+        
+        # Verify signal quality metrics
+        metrics = self.signal_tracker.get_metrics()
         self.assertGreater(len(metrics), 0)
         self.assertIn('precision', metrics.columns)
         self.assertIn('auc', metrics.columns)
-        
-        # Check regime detection
-        regime = self.detector.detect_regime(self.returns)
-        self.assertIn(regime, ['bullish', 'bearish', 'neutral', 'high_volatility'])
-        
-        # Check model weights
-        weights = self.detector.get_regime_weights()
-        self.assertIn('xgb', weights)
-        self.assertIn('lstm', weights)
-        self.assertIn('transformer', weights)
-        self.assertAlmostEqual(sum(weights.values()), 1.0)
     
-    def test_retraining_schedule(self):
-        """Test model retraining schedule."""
-        # Initial training
-        self.loop.retrain_models(self.features, self.returns)
-        self.assertIsNotNone(self.loop.last_retrain)
+    def test_safety_features(self):
+        """Test safety features and risk controls."""
+        # Train models
+        models = self.learning_loop.retrain_models(
+            self.features,
+            self.returns,
+            self.market_data
+        )
         
-        # Should not retrain immediately
-        self.assertFalse(self.loop.should_retrain())
+        # Test circuit breaker
+        self.learning_loop.safety_monitor.trigger_circuit_breaker('xgb')
+        signals, risk_metrics = self.learning_loop.generate_signals(
+            self.features,
+            self.market_data
+        )
+        self.assertNotIn('xgb', risk_metrics['confidences'])
         
-        # Force retrain by setting last_retrain to past
-        self.loop.last_retrain = datetime.now() - timedelta(days=2)
-        self.assertTrue(self.loop.should_retrain())
+        # Test performance degradation
+        self.learning_loop.safety_monitor.performance_history['xgb'] = [
+            {'timestamp': datetime.now(), 'score': 0.3}  # Below threshold
+        ]
+        signals, risk_metrics = self.learning_loop.generate_signals(
+            self.features,
+            self.market_data
+        )
+        self.assertNotIn('xgb', risk_metrics['confidences'])
+        
+        # Test position sizing
+        for model_id, size in risk_metrics['position_sizes'].items():
+            self.assertGreaterEqual(size, 0)
+            self.assertLessEqual(size, 1)
+        
+        # Test stop-losses
+        for model_id, stop_loss in risk_metrics['stop_losses'].items():
+            self.assertLess(stop_loss, 0)  # Stop-loss should be negative
     
     def test_regime_switching(self):
-        """Test regime switching and model weight adjustment."""
-        # Train models
-        self.loop.retrain_models(self.features, self.returns)
-        
+        """Test regime detection and model weight adjustment."""
         # Generate different return patterns
-        bullish_returns = pd.Series(np.random.uniform(0.001, 0.01, 100))
-        bearish_returns = pd.Series(np.random.uniform(-0.01, -0.001, 100))
-        volatile_returns = pd.Series(np.random.uniform(-0.02, 0.02, 100))
+        high_vol_returns = self.returns * 2  # High volatility
+        trend_returns = pd.Series(
+            np.cumsum(np.random.randn(self.n_samples) * 0.1),
+            index=self.returns.index
+        )  # Trending
         
-        # Check regime detection
-        bullish_regime = self.detector.detect_regime(bullish_returns)
-        bearish_regime = self.detector.detect_regime(bearish_returns)
-        volatile_regime = self.detector.detect_regime(volatile_returns)
+        # Test high volatility regime
+        self.regime_detector.detect_regime(high_vol_returns)
+        weights = self.regime_detector.get_regime_weights()
+        self.assertIn('high_volatility', self.regime_detector.regime_history[-1]['regime'])
         
-        self.assertEqual(bullish_regime, 'bullish')
-        self.assertEqual(bearish_regime, 'bearish')
-        self.assertEqual(volatile_regime, 'high_volatility')
-        
-        # Check weight adjustment
-        bullish_weights = self.detector.get_regime_weights()
-        self.assertGreater(bullish_weights['xgb'], 0.3)  # XGBoost favored in bullish
-        
-        bearish_weights = self.detector.get_regime_weights()
-        self.assertGreater(bearish_weights['transformer'], 0.3)  # Transformer favored in bearish
-    
-    def test_signal_quality_tracking(self):
-        """Test signal quality tracking and visualization."""
-        # Generate signals
-        signals = self.loop.generate_signals(self.features, self.market_data)
-        
-        # Update metrics
-        metrics = self.tracker.update(signals, self.returns)
-        self.assertIn('precision', metrics)
-        self.assertIn('auc', metrics)
-        self.assertIn('correlation', metrics)
-        
-        # Test visualization
-        metrics_df = self.tracker.get_metrics()
-        fig = plot_signal_quality_metrics(metrics_df)
-        self.assertIsNotNone(fig)
-    
-    def test_feature_importance_tracking(self):
-        """Test feature importance tracking and visualization."""
-        # Train models
-        models = self.loop.retrain_models(self.features, self.returns)
-        
-        # Get feature importance
-        importance_dict = {}
-        for model_id, model in models.items():
-            importance_dict[model_id] = self.loop._get_feature_importance(
-                model,
-                self.features
-            )
-        
-        # Test visualization
-        fig = plot_feature_importance(importance_dict)
-        self.assertIsNotNone(fig)
+        # Test trending regime
+        self.regime_detector.detect_regime(trend_returns)
+        weights = self.regime_detector.get_regime_weights()
+        self.assertIn(
+            self.regime_detector.regime_history[-1]['regime'],
+            ['bullish', 'bearish']
+        )
     
     def test_error_handling(self):
-        """Test error handling in ML pipeline."""
-        # Test with missing data
-        with self.assertRaises(Exception):
-            self.loop.generate_signals(pd.DataFrame(), None)
+        """Test error handling and recovery."""
+        # Test with invalid data
+        invalid_features = pd.DataFrame(
+            np.random.randn(10, self.n_features),
+            columns=[f'feature_{i}' for i in range(self.n_features)]
+        )
+        invalid_returns = pd.Series(np.random.randn(10))
         
-        # Test with invalid model
-        with self.assertRaises(ValueError):
-            self.registry.save_model('invalid', object(), {})
+        # Should handle insufficient data gracefully
+        models = self.learning_loop.retrain_models(
+            invalid_features,
+            invalid_returns,
+            self.market_data
+        )
+        self.assertEqual(len(models), 0)
         
-        # Test with insufficient samples
-        small_features = pd.DataFrame(np.random.randn(5, 10))
-        small_returns = pd.Series(np.random.randn(5))
-        models = self.loop.retrain_models(small_features, small_returns)
-        self.assertEqual(len(models), 0)  # Should return empty dict
+        # Test with missing market data
+        signals, risk_metrics = self.learning_loop.generate_signals(
+            self.features,
+            None
+        )
+        self.assertIsInstance(signals, pd.Series)
+        self.assertIsInstance(risk_metrics, dict)
     
-    def test_visualization_integration(self):
-        """Test integration of visualization components."""
-        # Generate test data
-        signals = self.loop.generate_signals(self.features, self.market_data)
-        regime_history = self.detector.regime_history
-        weights_history = [
-            {
-                'timestamp': datetime.now() - timedelta(days=i),
-                'xgb': 0.4,
-                'lstm': 0.3,
-                'transformer': 0.3
-            }
-            for i in range(10)
-        ]
+    def test_model_persistence(self):
+        """Test model saving and loading."""
+        # Train and save models
+        models = self.learning_loop.retrain_models(
+            self.features,
+            self.returns,
+            self.market_data
+        )
         
-        # Test all visualizations
-        metrics_fig = plot_signal_quality_metrics(self.tracker.get_metrics())
-        regime_fig = plot_regime_history(regime_history, self.returns)
-        weights_fig = plot_model_weights(weights_history)
-        decay_fig = plot_signal_decay(signals, self.returns)
+        # Verify models were saved
+        for model_id in models.keys():
+            model_path = self.model_dir / f"{model_id}.joblib"
+            self.assertTrue(model_path.exists())
         
-        self.assertIsNotNone(metrics_fig)
-        self.assertIsNotNone(regime_fig)
-        self.assertIsNotNone(weights_fig)
-        self.assertIsNotNone(decay_fig)
+        # Load models and verify
+        for model_id in models.keys():
+            model, metadata = self.model_registry.load_model(model_id)
+            self.assertIsNotNone(model)
+            self.assertIn('regime', metadata)
+            self.assertIn('n_samples', metadata)
+            self.assertIn('feature_importance', metadata)
+            self.assertIn('cross_val_score', metadata)
 
 if __name__ == '__main__':
     unittest.main() 

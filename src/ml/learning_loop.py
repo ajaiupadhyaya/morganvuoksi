@@ -20,6 +20,8 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
+from .safety import ModelSafetyMonitor, CrossValidator, PositionSizer
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -248,6 +250,11 @@ class LearningLoop:
         self.retrain_interval = retrain_interval
         self.min_samples = min_samples
         self.last_retrain = None
+        
+        # Initialize safety components
+        self.safety_monitor = ModelSafetyMonitor()
+        self.cross_validator = CrossValidator()
+        self.position_sizer = PositionSizer()
     
     def should_retrain(self) -> bool:
         """Check if models should be retrained."""
@@ -282,8 +289,15 @@ class LearningLoop:
                 max_depth=5,
                 learning_rate=0.1
             )
-            xgb_model.fit(features, returns > 0)
-            models['xgb'] = xgb_model
+            # Cross-validate
+            xgb_score, xgb_metrics = self.cross_validator.validate(
+                xgb_model,
+                features,
+                returns > 0
+            )
+            if xgb_score > 0.5:  # Only use if performance is acceptable
+                xgb_model.fit(features, returns > 0)
+                models['xgb'] = xgb_model
             
             # LSTM
             lstm_model = LSTMClassifier(
@@ -291,8 +305,16 @@ class LearningLoop:
                 hidden_dim=64,
                 output_dim=1
             )
-            lstm_model.fit(features, returns > 0)
-            models['lstm'] = lstm_model
+            # Cross-validate with early stopping
+            lstm_score, lstm_metrics = self.cross_validator.validate(
+                lstm_model,
+                features,
+                returns > 0,
+                is_deep_learning=True
+            )
+            if lstm_score > 0.5:
+                lstm_model.fit(features, returns > 0)
+                models['lstm'] = lstm_model
             
             # Transformer
             transformer_model = TransformerClassifier(
@@ -300,20 +322,30 @@ class LearningLoop:
                 hidden_dim=128,
                 num_heads=4
             )
-            transformer_model.fit(features, returns > 0)
-            models['transformer'] = transformer_model
+            # Cross-validate with early stopping
+            transformer_score, transformer_metrics = self.cross_validator.validate(
+                transformer_model,
+                features,
+                returns > 0,
+                is_deep_learning=True
+            )
+            if transformer_score > 0.5:
+                transformer_model.fit(features, returns > 0)
+                models['transformer'] = transformer_model
             
-            # Save models
+            # Save models with metadata
             for model_id, model in models.items():
-                self.model_registry.save_model(
-                    model_id,
-                    model,
-                    {
-                        'regime': regime,
-                        'n_samples': len(features),
-                        'feature_importance': self._get_feature_importance(model, features)
-                    }
-                )
+                metrics = {
+                    'regime': regime,
+                    'n_samples': len(features),
+                    'feature_importance': self._get_feature_importance(model, features),
+                    'cross_val_score': {
+                        'xgb': xgb_score,
+                        'lstm': lstm_score,
+                        'transformer': transformer_score
+                    }[model_id]
+                }
+                self.model_registry.save_model(model_id, model, metrics)
             
             self.last_retrain = datetime.now()
             logger.info("Models retrained successfully")
@@ -347,7 +379,7 @@ class LearningLoop:
         self,
         features: pd.DataFrame,
         market_data: Optional[pd.DataFrame] = None
-    ) -> pd.Series:
+    ) -> Tuple[pd.Series, Dict[str, float]]:
         """Generate trading signals using ensemble of models."""
         try:
             # Get regime-specific weights
@@ -355,25 +387,74 @@ class LearningLoop:
             
             # Load models and generate predictions
             predictions = {}
+            confidences = {}
             for model_id, weight in weights.items():
-                model, _ = self.model_registry.load_model(model_id)
+                # Skip if circuit breaker is triggered
+                if self.safety_monitor.is_circuit_breaker_triggered(model_id):
+                    logger.warning(f"Skipping model {model_id} due to circuit breaker")
+                    continue
+                
+                model, metadata = self.model_registry.load_model(model_id)
                 pred = model.predict_proba(features)[:, 1]
+                
+                # Check model performance
+                if not self.safety_monitor.check_performance(model_id, metadata):
+                    logger.warning(f"Model {model_id} failed performance check")
+                    continue
+                
+                # Check prediction confidence
+                if not self.safety_monitor.check_confidence(model_id, pred):
+                    logger.warning(f"Model {model_id} failed confidence check")
+                    continue
+                
                 predictions[model_id] = pred * weight
+                confidences[model_id] = np.mean(pred)
             
             # Combine predictions
             ensemble_signal = pd.Series(0, index=features.index)
             for pred in predictions.values():
                 ensemble_signal += pred
             
+            # Check signal volatility
+            for model_id in predictions.keys():
+                if not self.safety_monitor.check_signal_volatility(
+                    model_id,
+                    pd.Series(predictions[model_id])
+                ):
+                    logger.warning(f"Model {model_id} failed volatility check")
+            
+            # Calculate position sizes and stop-losses
+            position_sizes = {}
+            stop_losses = {}
+            for model_id, signal in predictions.items():
+                confidence = confidences[model_id]
+                volatility = market_data['returns'].std() if market_data is not None else None
+                
+                position_sizes[model_id] = self.position_sizer.calculate_position_size(
+                    signal[-1],  # Use latest signal
+                    confidence,
+                    volatility
+                )
+                
+                stop_losses[model_id] = self.position_sizer.calculate_stop_loss(
+                    position_sizes[model_id],
+                    volatility if volatility is not None else 0.02,
+                    confidence
+                )
+            
             # Update signal quality metrics
             if market_data is not None:
                 self.signal_tracker.update(ensemble_signal, market_data['returns'])
             
-            return ensemble_signal
+            return ensemble_signal, {
+                'position_sizes': position_sizes,
+                'stop_losses': stop_losses,
+                'confidences': confidences
+            }
             
         except Exception as e:
             logger.error(f"Error generating signals: {str(e)}")
-            return pd.Series(0, index=features.index)
+            return pd.Series(0, index=features.index), {}
 
 class LSTMClassifier(nn.Module):
     """LSTM-based classifier for time series prediction."""

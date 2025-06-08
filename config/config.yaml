@@ -1,0 +1,81 @@
+# System Configuration
+
+# Regime Detector Configuration
+regime_detector:
+  lookback_window: 20  # Days to look back for regime detection
+  threshold: 0.7  # Threshold for regime classification
+  indicators:
+    market_breadth:
+      enabled: true
+      window: 10
+    volatility_term:
+      enabled: true
+      window: 20
+    correlation:
+      enabled: true
+      window: 30
+    liquidity:
+      enabled: true
+      window: 15
+
+# Learning Loop Configuration
+learning_loop:
+  model_dir: "models"  # Directory to store models
+  retrain_interval: 7  # Days between retraining
+  performance_threshold: 0.6  # Minimum performance to keep model
+  models:
+    xgboost:
+      enabled: true
+      params:
+        max_depth: 6
+        learning_rate: 0.1
+        n_estimators: 100
+    lstm:
+      enabled: true
+      params:
+        units: 64
+        dropout: 0.2
+        epochs: 50
+    transformer:
+      enabled: true
+      params:
+        n_heads: 4
+        n_layers: 2
+        dropout: 0.1
+
+# Dashboard Configuration
+dashboard:
+  port: 8050
+  debug: false
+  theme: "light"
+  refresh_interval: 60  # Seconds between updates
+  export:
+    enabled: true
+    formats:
+      - "html"
+      - "png"
+    directory: "exports"
+
+# Data Configuration
+data:
+  source: "local"  # or "api"
+  update_interval: 300  # Seconds between data updates
+  storage:
+    type: "sqlite"  # or "postgres"
+    path: "data/market_data.db"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "trading_system.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Risk Management
+risk:
+  position_sizing:
+    max_position: 0.1  # Maximum position size as fraction of portfolio
+    stop_loss: 0.02  # Stop loss as fraction of position
+  circuit_breakers:
+    max_drawdown: 0.1  # Maximum drawdown before stopping
+    volatility_threshold: 0.3  # Maximum volatility before reducing exposure 

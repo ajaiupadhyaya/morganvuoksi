@@ -1,5 +1,5 @@
-# Use Python 3.10 slim image
-FROM python:3.10-slim
+# Use Python 3.9 slim image as base
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
@@ -12,27 +12,24 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY src/ src/
-COPY config/ config/
-COPY tests/ tests/
+# Copy the rest of the application
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p data models exports logs
 
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Create necessary directories
-RUN mkdir -p data/raw data/processed models logs
+# Expose port for the dashboard
+EXPOSE 8050
 
-# Set up entrypoint
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
-
-# Set default command
-CMD ["./entrypoint.sh"] 
+# Command to run the application
+CMD ["python", "src/main.py"] 

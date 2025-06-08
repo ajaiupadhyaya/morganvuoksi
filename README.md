@@ -1,104 +1,142 @@
-# Vuoksi Quant Core (VQC)
+# ML Trading System with Regime Detection
 
-**An institutional-grade quantitative research and trading system** designed to match the standards of top-tier firms like Jane Street, Citadel, and JPMorgan. Vuoksi Quant Core integrates machine learning, econometrics, NLP, and advanced portfolio theory to discover and execute profitable trading strategies in equities, options, and ETFs.
+A comprehensive machine learning trading system with regime detection, model management, and interactive visualization.
 
----
+## Features
 
-## 🔍 Project Overview
+- **Regime Detection**
+  - Market breadth analysis
+  - Volatility term structure
+  - Correlation regime detection
+  - Liquidity regime monitoring
+  - Composite regime classification
 
-Vuoksi Quant Core (VQC) is a modular quant trading system built to:
+- **ML Models**
+  - XGBoost for traditional ML
+  - LSTM for sequence modeling
+  - Transformer for complex patterns
+  - Model ensemble with regime-based weighting
 
-- Generate alpha signals using machine learning and time series models
-- Construct portfolios using optimization methods with risk constraints
-- Execute trades and evaluate strategies under realistic conditions
-- Incorporate news and sentiment via NLP for dynamic adjustment
+- **Interactive Dashboard**
+  - Real-time regime visualization
+  - Model performance tracking
+  - Signal quality analysis
+  - Portfolio equity overlay
+  - Export capabilities (HTML, PNG)
 
----
+- **Risk Management**
+  - Position sizing based on regime
+  - Stop-loss calculation
+  - Circuit breakers
+  - Performance monitoring
 
-## 📈 Core Modules
+## Installation
 
-### 1. **Alpha Signal Engine**
-- **Statistical Models**: ARIMA, GARCH, VAR
-- **Machine Learning**: Random Forest, XGBoost, SVM
-- **Deep Learning**: LSTM, GRU, Transformer models
-- **Cointegration / Granger Causality**: For pairs trading strategies
-- **PCA**: Factor extraction from high-dimensional data
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/ml-trading-system.git
+cd ml-trading-system
+```
 
-### 2. **Portfolio Construction**
-- **Markowitz Optimization**: Mean-variance allocation
-- **Black-Litterman**: Incorporating views into weights
-- **CVaR Optimization**: Tail-risk-aware portfolio design
-- **Risk Metrics**: Sharpe, Sortino, Kelly Criterion
-- **Monte Carlo Simulation**: Stress testing and drawdown analysis
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-### 3. **Execution Strategy**
-- **Stat Arb / Pairs Trading**: Cointegrated spread trading
-- **Options Strategies**: Iron Condor, Butterfly, Delta-Neutral
-- **Market Making**: Simulated order book interaction
-- **Option Pricing Models**: Black-Scholes, Binomial Tree
-- **Greeks Sensitivity Analysis**: Delta, Gamma, Theta, Vega
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-### 4. **NLP & Sentiment Layer**
-- **FinBERT / BERT**: Headline and earnings call analysis
-- **Topic Modeling**: LDA for thematic detection
-- **Sentiment Scoring**: Earnings, macro, and Reddit sentiment
-- **Named Entity Recognition**: Extract company/entity relationships
+4. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
 
----
+## Configuration
 
-## 🛠 Tech Stack
+The system is configured through `config/config.yaml`. Key sections:
 
-### Languages:
-- Python, SQL (optionally: C++ for HFT-style extensions)
+- `regime_detector`: Regime detection parameters
+- `learning_loop`: Model training and management
+- `dashboard`: Visualization settings
+- `data`: Data source and storage
+- `risk`: Risk management parameters
 
-### Libraries:
-- `pandas`, `numpy`, `statsmodels`, `scikit-learn`, `cvxpy`
-- `TensorFlow`, `PyTorch`, `transformers`, `plotly`, `Dash`
+## Usage
 
-### Infrastructure:
-- Data: Alpaca, Yahoo Finance, IEX Cloud, Polygon.io
-- DevOps: Git, Docker, MLflow, Jenkins, AWS/GCP
-- Frontend: Dash / FastAPI (for diagnostics and dashboard)
+1. Start the system:
+```bash
+python src/main.py
+```
 
----
+2. Access the dashboard:
+- Open `http://localhost:8050` in your browser
+- Use the interactive controls to:
+  - Select time ranges
+  - Toggle overlays
+  - Export visualizations
 
-## 📦 Features Planned
+3. Monitor the system:
+- Check `trading_system.log` for system status
+- Review model performance in the dashboard
+- Monitor regime transitions
 
-- ✅ Backtesting engine with walk-forward and rolling CV
-- ✅ Portfolio optimizer with multiple risk models
-- ✅ AutoML for signal generation and model selection
-- ✅ NLP event-driven strategy integration
-- ✅ GUI dashboard for signal + execution analytics
+## Development
 
----
+### Project Structure
+```
+ml-trading-system/
+├── config/
+│   └── config.yaml
+├── src/
+│   ├── ml/
+│   │   ├── learning_loop.py
+│   │   ├── regime_detector.py
+│   │   └── safety.py
+│   ├── visuals/
+│   │   ├── regime_dashboard.py
+│   │   └── ml_visuals.py
+│   └── main.py
+├── tests/
+│   ├── test_learning_loop.py
+│   ├── test_regime_detector.py
+│   └── test_regime_dashboard.py
+├── models/
+├── data/
+├── exports/
+├── requirements.txt
+└── README.md
+```
 
-## 🚧 Project Timeline
+### Running Tests
+```bash
+pytest tests/
+```
 
-| Phase | Task | Duration |
-|-------|------|----------|
-| 1     | Data ingestion, backtesting engine | Week 1–2 |
-| 2     | Signal modeling (ML, stats) | Week 3–6 |
-| 3     | Portfolio & risk modeling | Week 7–9 |
-| 4     | Execution + transaction cost models | Week 10–11 |
-| 5     | UI + final testing | Week 12+ |
+### Code Style
+```bash
+black src/ tests/
+isort src/ tests/
+flake8 src/ tests/
+```
 
----
+## Contributing
 
-## 📊 Success Metrics
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-- Backtest Sharpe Ratio > 1.5
-- Paper trading with <5bps slippage
-- Full model/experiment version control
-- High scalability (>1M ticks/min capacity)
+## License
 
----
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 📄 License
+## Acknowledgments
 
-MIT License (or customize as needed)
-
----
-
-## 🤝 Contributions
-
-This project is open for collaboration—if you're interested in high-quality, modular quant research systems or want to contribute to alpha generation, NLP pipelines, or portfolio optimization, feel free to open a pull request or contact [Ajai Upadhyaya](http://www.linkedin.com/in/ajai-upadhyaya).
+- Built with Python, Dash, and Plotly
+- Uses XGBoost, TensorFlow, and PyTorch
+- Inspired by academic research in regime detection and ML trading
