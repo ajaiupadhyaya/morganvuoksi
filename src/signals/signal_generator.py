@@ -1,58 +1,66 @@
 import pandas as pd
-import numpy as np
-from pathlib import Path
+from tqdm import tqdm
+from src.utils.helpers import ensure_dir
+
+# Set input paths
+ALPHA_PATH = "data/processed/alpha_factors.parquet"
+SENTIMENT_PATH = "data/processed/sentiment_scores.csv"
+OUTPUT_PATH = "data/processed/trading_signals.csv"
 
 def load_data(alpha_path: str, sentiment_path: str):
     alpha_df = pd.read_parquet(alpha_path)
-    sentiment_df = pd.read_parquet(sentiment_path)
+    sentiment_df = pd.read_csv(sentiment_path, parse_dates=["date"])
     return alpha_df, sentiment_df
 
 def merge_data(alpha_df, sentiment_df):
-    df = pd.merge(alpha_df, sentiment_df, on=["date", "ticker"], how="inner")
-    df = df.dropna()
-    return df
+    # Ensure date columns are in datetime format
+    alpha_df.index = pd.to_datetime(alpha_df.index)
+    sentiment_df['date'] = pd.to_datetime(sentiment_df['date'])
 
-def normalize_scores(df, alpha_cols, sentiment_col):
-    # Z-score normalization
-    for col in alpha_cols:
-        df[col + "_z"] = df.groupby("date")[col].transform(lambda x: (x - x.mean()) / x.std())
-
-    df["sentiment_z"] = df.groupby("date")[sentiment_col].transform(lambda x: (x - x.mean()) / x.std())
-    return df
-
-def compute_signal(df, alpha_cols, sentiment_col, alpha_weight=0.7, sentiment_weight=0.3):
-    # Weighted composite score
-    z_cols = [col + "_z" for col in alpha_cols]
-    df["alpha_score"] = df[z_cols].mean(axis=1)
-    df["composite_score"] = alpha_weight * df["alpha_score"] + sentiment_weight * df["sentiment_z"]
-
-    # Rank signals per day
-    df["rank"] = df.groupby("date")["composite_score"].rank(method="first", ascending=False)
-    df["signal"] = df.groupby("date")["composite_score"].transform(
-        lambda x: pd.qcut(x, q=3, labels=[-1, 0, 1]).astype(int)
+    merged = pd.merge(
+        sentiment_df,
+        alpha_df,
+        left_on='date',
+        right_index=True,
+        how='inner'
     )
-    return df
+    return merged
 
-def save_signals(df, output_path):
-    df_out = df[["date", "ticker", "composite_score", "signal"]].copy()
-    df_out.to_parquet(output_path, index=False)
-    print(f"[✓] Signals saved to: {output_path}")
+def generate_signals(df):
+    def decide(row):
+        if (
+            row["momentum_10d"] > 0 and
+            row["rsi"] < 30 and
+            row["sentiment_label"] == "positive"
+        ):
+            return "buy"
+        elif (
+            row["momentum_10d"] < 0 and
+            row["rsi"] > 70 and
+            row["sentiment_label"] == "negative"
+        ):
+            return "sell"
+        else:
+            return "hold"
+    df["signal"] = df.apply(decide, axis=1)
+    return df
 
 def main():
-    alpha_path = "data/processed/alpha_factors.parquet"
-    sentiment_path = "data/processed/sentiment_scores.parquet"
-    output_path = "data/processed/signals.parquet"
+    print("🚀 Generating trading signals...")
+    ensure_dir("data/processed")
 
-    alpha_df, sentiment_df = load_data(alpha_path, sentiment_path)
+    # Load
+    alpha_df, sentiment_df = load_data(ALPHA_PATH, SENTIMENT_PATH)
 
-    df = merge_data(alpha_df, sentiment_df)
+    # Merge
+    combined_df = merge_data(alpha_df, sentiment_df)
 
-    alpha_columns = [col for col in alpha_df.columns if col not in ["date", "ticker"]]
-    sentiment_column = "sentiment_score"
+    # Generate signals
+    signals_df = generate_signals(combined_df)
 
-    df = normalize_scores(df, alpha_columns, sentiment_column)
-    df = compute_signal(df, alpha_columns, sentiment_column)
-    save_signals(df, output_path)
+    # Save
+    signals_df.to_csv(OUTPUT_PATH, index=False)
+    print(f"[✓] Trading signals saved to: {OUTPUT_PATH}")
 
 if __name__ == "__main__":
     main()
