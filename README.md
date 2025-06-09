@@ -1,39 +1,28 @@
-# Quantitative Finance System
+# API Monitoring Dashboard
 
-A comprehensive quantitative finance system for algorithmic trading, featuring multiple machine learning models, real-time data processing, and advanced backtesting capabilities.
+A real-time API monitoring dashboard built with Streamlit that tracks API health, performance metrics, and provides visualizations.
 
 ## Features
 
-- **Multiple ML Models**
-  - LSTM for deep learning
-  - XGBoost for ensemble learning
-  - ARIMA-GARCH for traditional econometrics
-  - Transformer for sequence learning
-  - PPO (Reinforcement Learning) for portfolio optimization
+- Real-time API health monitoring
+- Performance metrics tracking (uptime, latency, error rates)
+- Interactive visualizations
+- Historical data analysis
+- Configurable monitoring intervals
+- Redis-based data storage
 
-- **Data Infrastructure**
-  - Real-time data fetching from multiple sources
-  - Rate limiting and error handling
-  - Data validation and quality checks
+## Prerequisites
 
-- **Backtesting Engine**
-  - Comprehensive performance metrics
-  - Transaction costs and slippage modeling
-  - Risk management features
-  - Detailed reporting and visualization
-
-- **Interactive Dashboard**
-  - Real-time model performance monitoring
-  - Interactive visualizations
-  - Model comparison tools
-  - Export capabilities
+- Python 3.8+
+- Redis server
+- API keys for monitored services (if required)
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/quant-finance.git
-cd quant-finance
+git clone <repository-url>
+cd api-monitoring-dashboard
 ```
 
 2. Create a virtual environment:
@@ -47,75 +36,54 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up API keys:
-```bash
-cp .env.example .env
-# Edit .env with your API keys
+4. Configure environment variables:
+Create a `.env` file with your API keys:
 ```
+WEATHER_API_KEY=your_weather_api_key
+NEWS_API_KEY=your_news_api_key
+```
+
+5. Configure monitoring:
+Edit `config.yaml` to add your API endpoints and monitoring settings.
 
 ## Usage
 
-### Running the System
-
-1. Start the main system:
+1. Start Redis server:
 ```bash
-python run.py
+redis-server
 ```
 
-2. Run backtests:
+2. Run the dashboard:
 ```bash
-python run_backtest.py
+streamlit run src/main.py
 ```
 
-3. Launch the dashboard:
-```bash
-streamlit run src/dashboard/app.py
-```
+The dashboard will be available at `http://localhost:8501`
 
-### Configuration
+## Configuration
 
-The system is highly configurable through the following files:
-- `config.yaml`: Main configuration file
-- `.env`: API keys and sensitive data
-- Model-specific configs in `src/models/`
+The `config.yaml` file contains all configuration settings:
 
-### Data Sources
+- Redis connection details
+- Monitoring intervals
+- API endpoints to monitor
+- Headers and authentication
 
-The system supports multiple data sources:
-- Yahoo Finance
-- Alpha Vantage
-- Polygon.io
-- IEX Cloud
-- FRED (Federal Reserve Economic Data)
-
-## Architecture
+## Project Structure
 
 ```
-quant-finance/
-├── src/
-│   ├── data/           # Data fetching and processing
-│   ├── models/         # ML models
-│   ├── backtesting/    # Backtesting engine
-│   ├── dashboard/      # Interactive dashboard
-│   └── utils/          # Utility functions
-├── tests/              # Unit tests
-├── demo_outputs/       # Sample outputs and reports
-├── config.yaml         # Configuration file
-├── requirements.txt    # Dependencies
-└── README.md          # This file
+.
+├── config.yaml           # Configuration file
+├── requirements.txt      # Python dependencies
+├── README.md            # This file
+└── src/
+    ├── main.py          # Main application entry point
+    ├── api/
+    │   ├── monitor.py   # API monitoring logic
+    │   └── dashboard.py # Streamlit dashboard
+    └── utils/
+        └── logging.py   # Logging configuration
 ```
-
-## Model Performance
-
-### Sample Metrics (AAPL, 2023)
-
-| Model | Sharpe Ratio | Sortino Ratio | Max Drawdown | Win Rate |
-|-------|--------------|---------------|--------------|-----------|
-| LSTM | 1.85 | 2.12 | -12.3% | 58% |
-| XGBoost | 1.92 | 2.25 | -11.8% | 61% |
-| ARIMA-GARCH | 1.45 | 1.78 | -15.2% | 54% |
-| Transformer | 2.05 | 2.35 | -10.5% | 63% |
-| PPO | 1.78 | 2.01 | -13.1% | 57% |
 
 ## Contributing
 
@@ -128,13 +96,3 @@ quant-finance/
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- PyTorch team for the deep learning framework
-- XGBoost developers for the gradient boosting library
-- Streamlit team for the dashboard framework
-
-## Contact
-
-For questions and support, please open an issue or contact the maintainers.

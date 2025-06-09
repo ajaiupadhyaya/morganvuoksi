@@ -1,0 +1,30 @@
+# API Monitoring Configuration
+
+# Redis configuration
+redis_host: localhost
+redis_port: 6379
+redis_password: null
+
+# Monitoring settings
+check_interval: 60  # seconds
+retention_period: 7  # days
+
+# API endpoints to monitor
+apis:
+  # Example API configurations
+  github_api:
+    endpoint: https://api.github.com/status
+    headers:
+      Accept: application/vnd.github.v3+json
+  
+  weather_api:
+    endpoint: https://api.openweathermap.org/data/2.5/weather
+    headers:
+      appid: ${WEATHER_API_KEY}  # Use environment variable
+  
+  news_api:
+    endpoint: https://newsapi.org/v2/top-headlines
+    headers:
+      X-Api-Key: ${NEWS_API_KEY}  # Use environment variable
+  
+  # Add more APIs as needed 
