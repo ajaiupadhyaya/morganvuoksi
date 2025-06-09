@@ -1,44 +1,47 @@
 # ML Trading System with Regime Detection
 
-A comprehensive machine learning trading system with regime detection, model management, and interactive visualization.
+A real-time trading system that uses machine learning to detect market regimes and generate trading signals.
 
 ## Features
 
-- **Regime Detection**
-  - Market breadth analysis
-  - Volatility term structure
-  - Correlation regime detection
-  - Liquidity regime monitoring
-  - Composite regime classification
+- Real-time market data integration (Alpaca, Yahoo Finance, Polygon)
+- ML-based regime detection
+- Adaptive model weighting
+- Interactive dashboard
+- System health monitoring
+- Docker and Heroku deployment support
 
-- **ML Models**
-  - XGBoost for traditional ML
-  - LSTM for sequence modeling
-  - Transformer for complex patterns
-  - Model ensemble with regime-based weighting
+## Architecture
 
-- **Interactive Dashboard**
-  - Real-time regime visualization
-  - Model performance tracking
-  - Signal quality analysis
-  - Portfolio equity overlay
-  - Export capabilities (HTML, PNG)
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Data Ingestion │────▶│ Regime Detection│────▶│  ML Inference   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│ Signal Generation│────▶│ Position Sizing │────▶│  Visualization  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
 
-- **Risk Management**
-  - Position sizing based on regime
-  - Stop-loss calculation
-  - Circuit breakers
-  - Performance monitoring
+## Prerequisites
 
-## Installation
+- Python 3.9+
+- Docker (optional)
+- Heroku CLI (for cloud deployment)
+- API keys for data providers
+
+## Quick Start
+
+### Local Development
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ml-trading-system.git
+git clone <repository-url>
 cd ml-trading-system
 ```
 
-2. Create and activate a virtual environment:
+2. Create and activate virtual environment:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -49,79 +52,144 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables:
+4. Configure environment:
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with your API keys and settings
 ```
+
+5. Run the system:
+```bash
+./run.sh
+```
+
+### Docker Deployment
+
+1. Build and run with Docker:
+```bash
+docker-compose up --build
+```
+
+### Heroku Deployment
+
+1. Install Heroku CLI and login:
+```bash
+heroku login
+```
+
+2. Create Heroku app:
+```bash
+heroku create your-app-name
+```
+
+3. Set environment variables:
+```bash
+heroku config:set ALPACA_API_KEY=your_key
+heroku config:set ALPACA_API_SECRET=your_secret
+heroku config:set POLYGON_API_KEY=your_key
+```
+
+4. Deploy:
+```bash
+git push heroku main
+```
+
+## System Monitoring
+
+The system includes several monitoring endpoints:
+
+- Health Check: `http://localhost:8050/health`
+- System Status: `http://localhost:8050/status`
+- Dashboard: `http://localhost:8050`
+
+Logs are stored in:
+- `logs/trading_system.log` - System logs
+- `logs/api_errors.log` - API error logs
+- `logs/model_performance.log` - Model performance metrics
 
 ## Configuration
 
-The system is configured through `config/config.yaml`. Key sections:
+### Environment Variables
 
-- `regime_detector`: Regime detection parameters
-- `learning_loop`: Model training and management
-- `dashboard`: Visualization settings
-- `data`: Data source and storage
-- `risk`: Risk management parameters
+Required environment variables:
+- `ALPACA_API_KEY`: Your Alpaca API key
+- `ALPACA_API_SECRET`: Your Alpaca API secret
+- `POLYGON_API_KEY`: Your Polygon API key
+- `DEBUG`: Set to 'True' for development
+- `LOG_LEVEL`: Logging level (INFO, DEBUG, etc.)
 
-## Usage
+### Configuration File
 
-1. Start the system:
-```bash
-python src/main.py
-```
+The system uses `config/config.yaml` for:
+- Regime detection parameters
+- Model training settings
+- Dashboard configuration
+- Risk management rules
 
-2. Access the dashboard:
-- Open `http://localhost:8050` in your browser
-- Use the interactive controls to:
-  - Select time ranges
-  - Toggle overlays
-  - Export visualizations
+## Architecture Details
 
-3. Monitor the system:
-- Check `trading_system.log` for system status
-- Review model performance in the dashboard
-- Monitor regime transitions
+### Data Flow
 
-## Development
+1. **Data Ingestion**
+   - Real-time market data from APIs
+   - Historical data for model training
+   - Data validation and preprocessing
 
-### Project Structure
-```
-ml-trading-system/
-├── config/
-│   └── config.yaml
-├── src/
-│   ├── ml/
-│   │   ├── learning_loop.py
-│   │   ├── regime_detector.py
-│   │   └── safety.py
-│   ├── visuals/
-│   │   ├── regime_dashboard.py
-│   │   └── ml_visuals.py
-│   └── main.py
-├── tests/
-│   ├── test_learning_loop.py
-│   ├── test_regime_detector.py
-│   └── test_regime_dashboard.py
-├── models/
-├── data/
-├── exports/
-├── requirements.txt
-└── README.md
-```
+2. **Regime Detection**
+   - Multiple regime indicators
+   - Adaptive thresholds
+   - Regime history tracking
 
-### Running Tests
-```bash
-pytest tests/
-```
+3. **ML Inference**
+   - Model ensemble management
+   - Real-time predictions
+   - Performance monitoring
 
-### Code Style
-```bash
-black src/ tests/
-isort src/ tests/
-flake8 src/ tests/
-```
+4. **Signal Generation**
+   - Signal quality assessment
+   - Position sizing
+   - Risk management
+
+5. **Visualization**
+   - Interactive dashboard
+   - Real-time updates
+   - Performance metrics
+
+### Model Lifecycle
+
+1. **Training**
+   - Initial model training
+   - Periodic retraining
+   - Performance validation
+
+2. **Inference**
+   - Real-time predictions
+   - Model weighting
+   - Signal generation
+
+3. **Monitoring**
+   - Performance tracking
+   - Drift detection
+   - Error logging
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. **API Connection Issues**
+   - Verify API keys in .env
+   - Check API rate limits
+   - Monitor API error logs
+
+2. **Model Performance**
+   - Check model performance logs
+   - Verify data quality
+   - Monitor regime detection
+
+3. **Dashboard Issues**
+   - Clear browser cache
+   - Check server logs
+   - Verify port availability
 
 ## Contributing
 

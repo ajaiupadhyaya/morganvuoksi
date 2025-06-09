@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  trading_system:
+  dashboard:
     build: .
     ports:
       - "8050:8050"
@@ -14,6 +14,7 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
+      - SERVICE_TYPE=dashboard
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
@@ -21,27 +22,71 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      - ml_engine
 
-  # Add Redis for caching and message queue
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+  ml_engine:
+    build: .
     volumes:
-      - redis_data:/data
-
-  # Add PostgreSQL for data storage
-  db:
-    image: postgres:15-alpine
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    env_file:
+      - .env
     environment:
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-      - POSTGRES_DB=${DB_NAME:-trading}
-    ports:
-      - "5432:5432"
+      - PYTHONUNBUFFERED=1
+      - SERVICE_TYPE=ml_engine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8050/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  scheduler:
+    build: .
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SERVICE_TYPE=scheduler
+    restart: unless-stopped
+    command: python src/scheduler.py
+    depends_on:
+      - ml_engine
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
 
 volumes:
-  redis_data:
-  postgres_data: 
+  prometheus_data:
+  grafana_data: 

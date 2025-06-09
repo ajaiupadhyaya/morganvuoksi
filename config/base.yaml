@@ -1,0 +1,110 @@
+# Data API Settings
+data:
+  alpha_vantage:
+    rate_limit: 5  # calls per minute
+    retry_attempts: 3
+    timeout: 30
+  polygon:
+    rate_limit: 5
+    retry_attempts: 3
+    timeout: 30
+  iex:
+    rate_limit: 100
+    retry_attempts: 3
+    timeout: 30
+  fred:
+    rate_limit: 120
+    retry_attempts: 3
+    timeout: 30
+  yfinance:
+    rate_limit: 2000
+    retry_attempts: 3
+    timeout: 30
+
+# Model Settings
+models:
+  lstm:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+    batch_size: 32
+    learning_rate: 0.001
+    epochs: 100
+  xgboost:
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 100
+    subsample: 0.8
+    colsample_bytree: 0.8
+  arima:
+    max_p: 5
+    max_d: 2
+    max_q: 5
+    seasonal: true
+    m: 12
+  garch:
+    p: 1
+    q: 1
+    vol: GARCH
+    dist: normal
+
+# Portfolio Settings
+portfolio:
+  risk_free_rate: 0.02
+  max_position_size: 0.1
+  max_sector_exposure: 0.3
+  rebalance_frequency: 1d
+  transaction_cost: 0.001
+
+# Risk Management
+risk:
+  var_confidence: 0.95
+  cvar_confidence: 0.99
+  max_drawdown: 0.1
+  position_limits:
+    single_stock: 0.1
+    sector: 0.3
+    total: 1.0
+
+# Feature Engineering
+features:
+  technical_indicators:
+    - sma
+    - ema
+    - rsi
+    - macd
+    - bollinger_bands
+  fundamental_indicators:
+    - pe_ratio
+    - pb_ratio
+    - dividend_yield
+    - market_cap
+  market_indicators:
+    - vix
+    - treasury_yield
+    - credit_spread
+
+# Clustering
+clustering:
+  kmeans:
+    n_clusters: 5
+    random_state: 42
+  dbscan:
+    eps: 0.5
+    min_samples: 5
+  hierarchical:
+    n_clusters: 5
+    linkage: ward
+
+# Dashboard
+dashboard:
+  update_interval: 60  # seconds
+  max_data_points: 1000
+  default_timeframe: 1d
+  charts:
+    - price
+    - volume
+    - technical_indicators
+    - portfolio_performance
+    - risk_metrics
+    - sentiment_analysis 
