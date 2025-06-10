@@ -1,10 +1,12 @@
 """
-Production trading infrastructure for high-performance trading.
+Trading infrastructure for high-performance trading.
 """
 import asyncio
-import numpy as np
+import logging
+from typing import Dict, List, Optional, Union
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union
+import numpy as np
+from datetime import datetime, timedelta
 import redis
 import zmq
 import uvicorn
@@ -13,17 +15,23 @@ from ib_insync import IB, Stock, MarketOrder
 import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
+import cvxpy as cp
+import riskfolio as rp
+from prometheus_client import start_http_server, Counter, Gauge, Histogram
+
 from ..utils.logging import setup_logger
+from ..config import get_config
 
 logger = setup_logger(__name__)
 
 class TradingInfrastructure:
-    """Production trading infrastructure."""
+    """Trading infrastructure for high-performance trading."""
     
     def __init__(self, config: Dict):
         self.config = config
         self._setup_infrastructure()
         self._setup_apis()
+        self._setup_metrics()
     
     def _setup_infrastructure(self):
         """Setup trading infrastructure."""
@@ -69,6 +77,45 @@ class TradingInfrastructure:
                 base_url=self.config['alpaca']['base_url']
             )
     
+    def _setup_metrics(self):
+        """Setup Prometheus metrics."""
+        # Trading metrics
+        self.trades_counter = Counter(
+            'trades_total',
+            'Total number of trades executed'
+        )
+        self.trade_value = Gauge(
+            'trade_value',
+            'Value of trades in USD'
+        )
+        self.trade_latency = Histogram(
+            'trade_latency_seconds',
+            'Trade execution latency in seconds'
+        )
+        
+        # Performance metrics
+        self.portfolio_value = Gauge(
+            'portfolio_value',
+            'Current portfolio value in USD'
+        )
+        self.position_count = Gauge(
+            'position_count',
+            'Number of current positions'
+        )
+        
+        # Risk metrics
+        self.var_95 = Gauge(
+            'var_95',
+            '95% Value at Risk'
+        )
+        self.var_99 = Gauge(
+            'var_99',
+            '99% Value at Risk'
+        )
+        
+        # Start Prometheus server
+        start_http_server(8000)
+    
     def _setup_routes(self):
         """Setup FastAPI routes."""
         @self.app.websocket("/ws")
@@ -94,6 +141,9 @@ class TradingInfrastructure:
             Execution results
         """
         try:
+            # Start timing
+            start_time = datetime.now()
+            
             if order['broker'] == 'ib':
                 # Create IB order
                 contract = Stock(order['symbol'], 'SMART', 'USD')
@@ -107,11 +157,20 @@ class TradingInfrastructure:
                 while not trade.isDone():
                     await asyncio.sleep(0.1)
                 
+                # Calculate latency
+                latency = (datetime.now() - start_time).total_seconds()
+                
+                # Update metrics
+                self.trades_counter.inc()
+                self.trade_value.set(float(trade.fills[0].execution.price) * float(trade.fills[0].execution.shares))
+                self.trade_latency.observe(latency)
+                
                 return {
                     'status': 'filled',
                     'order_id': trade.order.orderId,
                     'fill_price': trade.fills[0].execution.price,
-                    'fill_time': trade.fills[0].execution.time
+                    'fill_time': trade.fills[0].execution.time,
+                    'latency': latency
                 }
             
             elif order['broker'] == 'alpaca':
@@ -124,9 +183,17 @@ class TradingInfrastructure:
                     time_in_force='day'
                 )
                 
+                # Calculate latency
+                latency = (datetime.now() - start_time).total_seconds()
+                
+                # Update metrics
+                self.trades_counter.inc()
+                self.trade_latency.observe(latency)
+                
                 return {
                     'status': 'submitted',
-                    'order_id': response.id
+                    'order_id': response.id,
+                    'latency': latency
                 }
             
         except Exception as e:
@@ -273,6 +340,19 @@ class TradingInfrastructure:
                 'timestamp': pd.Timestamp.now()
             }
             
+            # Update Prometheus metrics
+            self.portfolio_value.set(account_value)
+            self.position_count.set(len(positions))
+            
+            # Calculate VaR
+            if positions:
+                returns = pd.DataFrame([p.avgCost for p in positions]).pct_change()
+                var_95 = np.percentile(returns, 5)
+                var_99 = np.percentile(returns, 1)
+                
+                self.var_95.set(var_95)
+                self.var_99.set(var_99)
+            
             # Publish metrics
             self.socket.send_json(metrics)
             
@@ -298,4 +378,14 @@ class TradingInfrastructure:
         if hasattr(self, 'alpaca'):
             self.alpaca.close()
         
-        ray.shutdown() 
+        ray.shutdown()
+
+if __name__ == "__main__":
+    # Load configuration
+    config = get_config()
+    
+    # Create trading infrastructure
+    infrastructure = TradingInfrastructure(config)
+    
+    # Run infrastructure
+    infrastructure.run() 

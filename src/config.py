@@ -2,11 +2,12 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import os
 import logging
 from dotenv import load_dotenv
 import json
+import yaml
 
 # Load environment variables
 load_dotenv()
@@ -199,5 +200,168 @@ def main():
         logger.error(f"Configuration initialization failed: {str(e)}")
         raise
 
+def load_env() -> None:
+    """Load environment variables from .env file."""
+    load_dotenv()
+
+def get_config() -> Dict[str, Any]:
+    """
+    Get configuration from environment variables and config files.
+    
+    Returns:
+        Configuration dictionary
+    """
+    # Load environment variables
+    load_env()
+    
+    # Base configuration
+    config = {
+        'redis': {
+            'host': os.getenv('REDIS_HOST', 'localhost'),
+            'port': int(os.getenv('REDIS_PORT', 6379)),
+            'password': os.getenv('REDIS_PASSWORD')
+        },
+        'kafka': {
+            'bootstrap_servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092'),
+            'topic': os.getenv('KAFKA_TOPIC', 'market_data')
+        },
+        'influxdb': {
+            'url': os.getenv('INFLUXDB_URL', 'http://localhost:8086'),
+            'token': os.getenv('INFLUXDB_TOKEN'),
+            'org': os.getenv('INFLUXDB_ORG'),
+            'bucket': os.getenv('INFLUXDB_BUCKET', 'market_data')
+        },
+        'ray': {
+            'address': os.getenv('RAY_ADDRESS', 'auto'),
+            'namespace': os.getenv('RAY_NAMESPACE', 'trading')
+        },
+        'zmq': {
+            'port': int(os.getenv('ZMQ_PORT', 5555))
+        },
+        'ib': {
+            'host': os.getenv('IB_HOST', '127.0.0.1'),
+            'port': int(os.getenv('IB_PORT', 7497)),
+            'client_id': int(os.getenv('IB_CLIENT_ID', 1))
+        },
+        'alpaca': {
+            'api_key': os.getenv('ALPACA_API_KEY'),
+            'api_secret': os.getenv('ALPACA_API_SECRET'),
+            'base_url': os.getenv('ALPACA_BASE_URL', 'https://paper-api.alpaca.markets')
+        },
+        'models': {
+            'lstm': {
+                'hidden_size': 64,
+                'num_layers': 2,
+                'dropout': 0.2,
+                'batch_size': 32,
+                'epochs': 50,
+                'learning_rate': 0.001
+            },
+            'transformer': {
+                'd_model': 512,
+                'nhead': 8,
+                'num_layers': 6,
+                'dim_feedforward': 2048,
+                'dropout': 0.1
+            },
+            'tft': {
+                'hidden_size': 64,
+                'num_layers': 2,
+                'dropout': 0.2,
+                'batch_size': 32,
+                'epochs': 50,
+                'learning_rate': 0.001
+            },
+            'nbeats': {
+                'hidden_size': 64,
+                'num_layers': 2,
+                'dropout': 0.2,
+                'batch_size': 32,
+                'epochs': 50,
+                'learning_rate': 0.001
+            },
+            'ppo': {
+                'learning_rate': 0.0003,
+                'gamma': 0.99,
+                'eps_clip': 0.2,
+                'K_epochs': 10
+            },
+            'maml': {
+                'learning_rate': 0.001,
+                'meta_learning_rate': 0.01,
+                'num_tasks': 5,
+                'num_steps': 5
+            }
+        },
+        'research': {
+            'fama_french': True,
+            'statistical': True,
+            'risk_analytics': True,
+            'regime_switching': True,
+            'cointegration': True
+        },
+        'trading': {
+            'max_position_size': float(os.getenv('MAX_POSITION_SIZE', 100000)),
+            'max_leverage': float(os.getenv('MAX_LEVERAGE', 2.0)),
+            'stop_loss': float(os.getenv('STOP_LOSS', 0.02)),
+            'take_profit': float(os.getenv('TAKE_PROFIT', 0.04))
+        },
+        'logging': {
+            'level': os.getenv('LOG_LEVEL', 'INFO'),
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        }
+    }
+    
+    # Load additional configuration from YAML files
+    config_files = [
+        'config/database.yaml',
+        'config/models.yaml',
+        'config/trading.yaml'
+    ]
+    
+    for config_file in config_files:
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                file_config = yaml.safe_load(f)
+                config.update(file_config)
+    
+    return config
+
+def update_config(config: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Update configuration with new values.
+    
+    Args:
+        config: Current configuration
+        updates: Updates to apply
+        
+    Returns:
+        Updated configuration
+    """
+    def deep_update(d: Dict[str, Any], u: Dict[str, Any]) -> Dict[str, Any]:
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = deep_update(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+    
+    return deep_update(config, updates)
+
+def save_config(config: Dict[str, Any], filename: str) -> None:
+    """
+    Save configuration to YAML file.
+    
+    Args:
+        config: Configuration to save
+        filename: Output filename
+    """
+    with open(filename, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+
 if __name__ == "__main__":
-    main()
+    # Load configuration
+    config = get_config()
+    
+    # Print configuration
+    print(yaml.dump(config, default_flow_style=False))

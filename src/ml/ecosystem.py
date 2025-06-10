@@ -1,310 +1,435 @@
 """
-Advanced ML model ecosystem for quantitative trading.
+ML model ecosystem for quantitative trading.
 """
+import asyncio
+import logging
+from typing import Dict, List, Optional, Union
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 import torch
 import torch.nn as nn
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union
 from transformers import AutoModel, AutoTokenizer
-from pytorch_forecasting import TemporalFusionTransformer
-from pytorch_forecasting.models import NBeats
-from pytorch_forecasting.models.deepar import DeepAR
-from pytorch_forecasting.models.wavenet import WaveNet
-from pytorch_forecasting.models.lstm import LSTNet
-from pytorch_forecasting.models.informer import Informer
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import ray
+from ray import tune
+from ray.tune.schedulers import ASHAScheduler
+import optuna
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
 from ..utils.logging import setup_logger
+from ..config import get_config
 
 logger = setup_logger(__name__)
 
 class MLEcosystem:
-    """Advanced ML model ecosystem."""
+    """ML model ecosystem for quantitative trading."""
     
     def __init__(self, config: Dict):
         self.config = config
         self._setup_models()
-        self._setup_tokenizers()
+        self._setup_optimizers()
     
     def _setup_models(self):
         """Setup ML models."""
         # Financial LLMs
-        if 'finbert' in self.config:
-            self.finbert = AutoModel.from_pretrained("ProsusAI/finbert")
-        
-        if 'bloomberggpt' in self.config:
-            self.bloomberggpt = AutoModel.from_pretrained("bloomberg/bloomberg-gpt")
+        if 'finbert' in self.config['models']:
+            self.finbert = AutoModel.from_pretrained(
+                "ProsusAI/finbert"
+            )
+            self.finbert_tokenizer = AutoTokenizer.from_pretrained(
+                "ProsusAI/finbert"
+            )
         
         # Time Series Models
-        self.tft = TemporalFusionTransformer.from_dataset(
-            self.config.get('tft_dataset'),
-            learning_rate=0.03,
-            hidden_size=32,
-            attention_head_size=4,
-            dropout=0.1,
-            hidden_continuous_size=16,
-            loss=torch.nn.MSELoss(),
-            log_interval=10,
-            reduce_on_plateau_patience=4
-        )
+        if 'lstm' in self.config['models']:
+            self.lstm = self._build_lstm()
         
-        self.nbeats = NBeats.from_dataset(
-            self.config.get('nbeats_dataset'),
-            learning_rate=0.001,
-            log_interval=10,
-            log_val_interval=1,
-            weight_decay=1e-2,
-            widths=[32, 512],
-            backcast_loss_ratio=1.0
-        )
+        if 'transformer' in self.config['models']:
+            self.transformer = self._build_transformer()
         
-        self.deepar = DeepAR.from_dataset(
-            self.config.get('deepar_dataset'),
-            learning_rate=0.001,
-            log_interval=10,
-            log_val_interval=1,
-            hidden_size=32,
-            rnn_layers=2
-        )
+        if 'tft' in self.config['models']:
+            self.tft = self._build_tft()
         
-        self.wavenet = WaveNet.from_dataset(
-            self.config.get('wavenet_dataset'),
-            learning_rate=0.001,
-            log_interval=10,
-            log_val_interval=1,
-            hidden_size=32,
-            num_filters=32,
-            num_layers=4
-        )
+        if 'nbeats' in self.config['models']:
+            self.nbeats = self._build_nbeats()
         
-        self.lstnet = LSTNet.from_dataset(
-            self.config.get('lstnet_dataset'),
-            learning_rate=0.001,
-            log_interval=10,
-            log_val_interval=1,
-            hidden_size=32,
-            num_layers=2
-        )
+        # Reinforcement Learning
+        if 'ppo' in self.config['models']:
+            self.ppo = self._build_ppo()
         
-        self.informer = Informer.from_dataset(
-            self.config.get('informer_dataset'),
-            learning_rate=0.001,
-            log_interval=10,
-            log_val_interval=1,
-            d_model=512,
-            nhead=8,
-            num_encoder_layers=6,
-            num_decoder_layers=6,
-            dim_feedforward=2048,
-            dropout=0.1
+        # Meta Learning
+        if 'maml' in self.config['models']:
+            self.maml = self._build_maml()
+    
+    def _setup_optimizers(self):
+        """Setup model optimizers."""
+        self.optimizers = {
+            'lstm': torch.optim.Adam(
+                self.lstm.parameters(),
+                lr=self.config['models']['lstm']['learning_rate']
+            ),
+            'transformer': torch.optim.Adam(
+                self.transformer.parameters(),
+                lr=self.config['models']['transformer']['learning_rate']
+            ),
+            'tft': torch.optim.Adam(
+                self.tft.parameters(),
+                lr=self.config['models']['tft']['learning_rate']
+            ),
+            'nbeats': torch.optim.Adam(
+                self.nbeats.parameters(),
+                lr=self.config['models']['nbeats']['learning_rate']
+            ),
+            'ppo': torch.optim.Adam(
+                self.ppo.parameters(),
+                lr=self.config['models']['ppo']['learning_rate']
+            ),
+            'maml': torch.optim.Adam(
+                self.maml.parameters(),
+                lr=self.config['models']['maml']['learning_rate']
+            )
+        }
+    
+    def _build_lstm(self) -> nn.Module:
+        """Build LSTM model."""
+        return nn.Sequential(
+            nn.LSTM(
+                input_size=self.config['models']['lstm']['input_size'],
+                hidden_size=self.config['models']['lstm']['hidden_size'],
+                num_layers=self.config['models']['lstm']['num_layers'],
+                dropout=self.config['models']['lstm']['dropout'],
+                batch_first=True
+            ),
+            nn.Linear(
+                self.config['models']['lstm']['hidden_size'],
+                self.config['models']['lstm']['output_size']
+            )
         )
     
-    def _setup_tokenizers(self):
-        """Setup tokenizers for LLMs."""
-        if 'finbert' in self.config:
-            self.finbert_tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
-        
-        if 'bloomberggpt' in self.config:
-            self.bloomberggpt_tokenizer = AutoTokenizer.from_pretrained("bloomberg/bloomberg-gpt")
+    def _build_transformer(self) -> nn.Module:
+        """Build Transformer model."""
+        return nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=self.config['models']['transformer']['d_model'],
+                nhead=self.config['models']['transformer']['nhead'],
+                dim_feedforward=self.config['models']['transformer']['dim_feedforward'],
+                dropout=self.config['models']['transformer']['dropout']
+            ),
+            num_layers=self.config['models']['transformer']['num_layers']
+        )
     
-    def analyze_sentiment(self, text: str, model: str = 'finbert') -> Dict:
+    def _build_tft(self) -> nn.Module:
+        """Build Temporal Fusion Transformer model."""
+        # Implement TFT architecture
+        return nn.Module()
+    
+    def _build_nbeats(self) -> nn.Module:
+        """Build N-BEATS model."""
+        # Implement N-BEATS architecture
+        return nn.Module()
+    
+    def _build_ppo(self) -> nn.Module:
+        """Build PPO model."""
+        # Implement PPO architecture
+        return nn.Module()
+    
+    def _build_maml(self) -> nn.Module:
+        """Build MAML model."""
+        # Implement MAML architecture
+        return nn.Module()
+    
+    async def train_model(self, model_name: str, data: pd.DataFrame) -> Dict:
         """
-        Analyze sentiment of text.
+        Train ML model.
         
         Args:
-            text: Text to analyze
-            model: Model to use ('finbert' or 'bloomberggpt')
+            model_name: Name of model to train
+            data: Training data
             
         Returns:
-            Sentiment analysis results
+            Training results
         """
         try:
-            if model == 'finbert':
-                tokenizer = self.finbert_tokenizer
-                model = self.finbert
-            else:
-                tokenizer = self.bloomberggpt_tokenizer
-                model = self.bloomberggpt
-            
-            # Tokenize
-            inputs = tokenizer(
-                text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=512
+            # Prepare data
+            X, y = self._prepare_data(data)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y,
+                test_size=0.2,
+                random_state=42
             )
             
-            # Get predictions
-            with torch.no_grad():
-                outputs = model(**inputs)
-                predictions = torch.softmax(outputs.logits, dim=1)
+            # Train model
+            if model_name == 'lstm':
+                results = await self._train_lstm(X_train, y_train, X_test, y_test)
+            elif model_name == 'transformer':
+                results = await self._train_transformer(X_train, y_train, X_test, y_test)
+            elif model_name == 'tft':
+                results = await self._train_tft(X_train, y_train, X_test, y_test)
+            elif model_name == 'nbeats':
+                results = await self._train_nbeats(X_train, y_train, X_test, y_test)
+            elif model_name == 'ppo':
+                results = await self._train_ppo(X_train, y_train, X_test, y_test)
+            elif model_name == 'maml':
+                results = await self._train_maml(X_train, y_train, X_test, y_test)
+            else:
+                raise ValueError(f"Unknown model: {model_name}")
             
-            # Get sentiment
-            sentiment = {
-                'positive': predictions[0][0].item(),
-                'negative': predictions[0][1].item(),
-                'neutral': predictions[0][2].item()
-            }
-            
-            return sentiment
+            return results
             
         except Exception as e:
-            logger.error(f"Error analyzing sentiment: {str(e)}")
+            logger.error(f"Error training model: {str(e)}")
             return {}
     
-    def forecast_time_series(self, data: pd.DataFrame,
-                           model: str = 'tft',
-                           horizon: int = 10) -> pd.DataFrame:
+    async def _train_lstm(self, X_train: np.ndarray, y_train: np.ndarray,
+                         X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train LSTM model."""
+        try:
+            # Convert to tensors
+            X_train = torch.FloatTensor(X_train)
+            y_train = torch.FloatTensor(y_train)
+            X_test = torch.FloatTensor(X_test)
+            y_test = torch.FloatTensor(y_test)
+            
+            # Training loop
+            for epoch in range(self.config['models']['lstm']['epochs']):
+                # Forward pass
+                y_pred = self.lstm(X_train)
+                
+                # Calculate loss
+                loss = nn.MSELoss()(y_pred, y_train)
+                
+                # Backward pass
+                self.optimizers['lstm'].zero_grad()
+                loss.backward()
+                self.optimizers['lstm'].step()
+                
+                # Log progress
+                if epoch % 10 == 0:
+                    logger.info(f"Epoch {epoch}, Loss: {loss.item()}")
+            
+            # Evaluate
+            with torch.no_grad():
+                y_pred = self.lstm(X_test)
+                test_loss = nn.MSELoss()(y_pred, y_test)
+            
+            return {
+                'train_loss': loss.item(),
+                'test_loss': test_loss.item()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error training LSTM: {str(e)}")
+            return {}
+    
+    async def _train_transformer(self, X_train: np.ndarray, y_train: np.ndarray,
+                               X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train Transformer model."""
+        try:
+            # Convert to tensors
+            X_train = torch.FloatTensor(X_train)
+            y_train = torch.FloatTensor(y_train)
+            X_test = torch.FloatTensor(X_test)
+            y_test = torch.FloatTensor(y_test)
+            
+            # Training loop
+            for epoch in range(self.config['models']['transformer']['epochs']):
+                # Forward pass
+                y_pred = self.transformer(X_train)
+                
+                # Calculate loss
+                loss = nn.MSELoss()(y_pred, y_train)
+                
+                # Backward pass
+                self.optimizers['transformer'].zero_grad()
+                loss.backward()
+                self.optimizers['transformer'].step()
+                
+                # Log progress
+                if epoch % 10 == 0:
+                    logger.info(f"Epoch {epoch}, Loss: {loss.item()}")
+            
+            # Evaluate
+            with torch.no_grad():
+                y_pred = self.transformer(X_test)
+                test_loss = nn.MSELoss()(y_pred, y_test)
+            
+            return {
+                'train_loss': loss.item(),
+                'test_loss': test_loss.item()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error training Transformer: {str(e)}")
+            return {}
+    
+    async def _train_tft(self, X_train: np.ndarray, y_train: np.ndarray,
+                        X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train TFT model."""
+        # Implement TFT training
+        return {}
+    
+    async def _train_nbeats(self, X_train: np.ndarray, y_train: np.ndarray,
+                           X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train N-BEATS model."""
+        # Implement N-BEATS training
+        return {}
+    
+    async def _train_ppo(self, X_train: np.ndarray, y_train: np.ndarray,
+                        X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train PPO model."""
+        # Implement PPO training
+        return {}
+    
+    async def _train_maml(self, X_train: np.ndarray, y_train: np.ndarray,
+                         X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """Train MAML model."""
+        # Implement MAML training
+        return {}
+    
+    def _prepare_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        """Prepare data for training."""
+        try:
+            # Extract features and target
+            X = data.drop('target', axis=1).values
+            y = data['target'].values
+            
+            # Scale features
+            scaler = StandardScaler()
+            X = scaler.fit_transform(X)
+            
+            return X, y
+            
+        except Exception as e:
+            logger.error(f"Error preparing data: {str(e)}")
+            return np.array([]), np.array([])
+    
+    async def predict(self, model_name: str, data: pd.DataFrame) -> np.ndarray:
         """
-        Forecast time series.
+        Make predictions with model.
         
         Args:
-            data: Time series data
-            model: Model to use
-            horizon: Forecast horizon
+            model_name: Name of model to use
+            data: Input data
             
         Returns:
-            Forecast results
+            Model predictions
         """
         try:
-            if model == 'tft':
-                model = self.tft
-            elif model == 'nbeats':
-                model = self.nbeats
-            elif model == 'deepar':
-                model = self.deepar
-            elif model == 'wavenet':
-                model = self.wavenet
-            elif model == 'lstnet':
-                model = self.lstnet
-            elif model == 'informer':
-                model = self.informer
-            else:
-                raise ValueError(f"Unknown model: {model}")
-            
             # Prepare data
-            dataset = self._prepare_dataset(data, model)
+            X, _ = self._prepare_data(data)
+            X = torch.FloatTensor(X)
             
             # Make predictions
-            predictions = model.predict(dataset)
+            with torch.no_grad():
+                if model_name == 'lstm':
+                    predictions = self.lstm(X)
+                elif model_name == 'transformer':
+                    predictions = self.transformer(X)
+                elif model_name == 'tft':
+                    predictions = self.tft(X)
+                elif model_name == 'nbeats':
+                    predictions = self.nbeats(X)
+                elif model_name == 'ppo':
+                    predictions = self.ppo(X)
+                elif model_name == 'maml':
+                    predictions = self.maml(X)
+                else:
+                    raise ValueError(f"Unknown model: {model_name}")
             
-            return predictions
+            return predictions.numpy()
             
         except Exception as e:
-            logger.error(f"Error forecasting time series: {str(e)}")
-            return pd.DataFrame()
+            logger.error(f"Error making predictions: {str(e)}")
+            return np.array([])
     
-    def _prepare_dataset(self, data: pd.DataFrame,
-                        model: nn.Module) -> torch.utils.data.Dataset:
+    async def optimize_hyperparameters(self, model_name: str,
+                                     data: pd.DataFrame) -> Dict:
         """
-        Prepare dataset for model.
+        Optimize model hyperparameters.
         
         Args:
-            data: Time series data
-            model: Model to prepare data for
+            model_name: Name of model to optimize
+            data: Training data
             
         Returns:
-            Prepared dataset
-        """
-        # Convert to PyTorch tensors
-        if isinstance(data, pd.DataFrame):
-            data = torch.tensor(data.values, dtype=torch.float32)
-        
-        # Create dataset
-        if isinstance(model, TemporalFusionTransformer):
-            return self._prepare_tft_dataset(data)
-        elif isinstance(model, NBeats):
-            return self._prepare_nbeats_dataset(data)
-        elif isinstance(model, DeepAR):
-            return self._prepare_deepar_dataset(data)
-        elif isinstance(model, WaveNet):
-            return self._prepare_wavenet_dataset(data)
-        elif isinstance(model, LSTNet):
-            return self._prepare_lstnet_dataset(data)
-        elif isinstance(model, Informer):
-            return self._prepare_informer_dataset(data)
-        else:
-            raise ValueError(f"Unknown model type: {type(model)}")
-    
-    def _prepare_tft_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for TFT."""
-        # Implementation depends on your data structure
-        pass
-    
-    def _prepare_nbeats_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for N-BEATS."""
-        # Implementation depends on your data structure
-        pass
-    
-    def _prepare_deepar_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for DeepAR."""
-        # Implementation depends on your data structure
-        pass
-    
-    def _prepare_wavenet_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for WaveNet."""
-        # Implementation depends on your data structure
-        pass
-    
-    def _prepare_lstnet_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for LSTNet."""
-        # Implementation depends on your data structure
-        pass
-    
-    def _prepare_informer_dataset(self, data: torch.Tensor) -> torch.utils.data.Dataset:
-        """Prepare dataset for Informer."""
-        # Implementation depends on your data structure
-        pass
-    
-    def save_models(self, path: str):
-        """
-        Save all models.
-        
-        Args:
-            path: Path to save models
+            Optimal hyperparameters
         """
         try:
-            # Save time series models
-            torch.save(self.tft.state_dict(), f"{path}/tft.pt")
-            torch.save(self.nbeats.state_dict(), f"{path}/nbeats.pt")
-            torch.save(self.deepar.state_dict(), f"{path}/deepar.pt")
-            torch.save(self.wavenet.state_dict(), f"{path}/wavenet.pt")
-            torch.save(self.lstnet.state_dict(), f"{path}/lstnet.pt")
-            torch.save(self.informer.state_dict(), f"{path}/informer.pt")
+            # Define objective function
+            def objective(trial):
+                # Sample hyperparameters
+                if model_name == 'lstm':
+                    params = {
+                        'hidden_size': trial.suggest_int('hidden_size', 32, 256),
+                        'num_layers': trial.suggest_int('num_layers', 1, 4),
+                        'dropout': trial.suggest_float('dropout', 0.1, 0.5),
+                        'learning_rate': trial.suggest_float('learning_rate', 1e-4, 1e-2)
+                    }
+                elif model_name == 'transformer':
+                    params = {
+                        'd_model': trial.suggest_int('d_model', 64, 512),
+                        'nhead': trial.suggest_int('nhead', 4, 16),
+                        'num_layers': trial.suggest_int('num_layers', 2, 8),
+                        'dim_feedforward': trial.suggest_int('dim_feedforward', 256, 2048),
+                        'dropout': trial.suggest_float('dropout', 0.1, 0.5),
+                        'learning_rate': trial.suggest_float('learning_rate', 1e-4, 1e-2)
+                    }
+                else:
+                    raise ValueError(f"Unknown model: {model_name}")
+                
+                # Train model with hyperparameters
+                results = await self.train_model(model_name, data)
+                
+                return results['test_loss']
             
-            # Save LLMs
-            if hasattr(self, 'finbert'):
-                self.finbert.save_pretrained(f"{path}/finbert")
-            if hasattr(self, 'bloomberggpt'):
-                self.bloomberggpt.save_pretrained(f"{path}/bloomberggpt")
+            # Create study
+            study = optuna.create_study(direction='minimize')
+            study.optimize(objective, n_trials=100)
             
-            logger.info(f"Saved models to {path}")
+            return study.best_params
             
         except Exception as e:
-            logger.error(f"Error saving models: {str(e)}")
+            logger.error(f"Error optimizing hyperparameters: {str(e)}")
+            return {}
     
-    def load_models(self, path: str):
-        """
-        Load all models.
-        
-        Args:
-            path: Path to load models from
-        """
+    async def run(self):
+        """Run ML ecosystem."""
         try:
-            # Load time series models
-            self.tft.load_state_dict(torch.load(f"{path}/tft.pt"))
-            self.nbeats.load_state_dict(torch.load(f"{path}/nbeats.pt"))
-            self.deepar.load_state_dict(torch.load(f"{path}/deepar.pt"))
-            self.wavenet.load_state_dict(torch.load(f"{path}/wavenet.pt"))
-            self.lstnet.load_state_dict(torch.load(f"{path}/lstnet.pt"))
-            self.informer.load_state_dict(torch.load(f"{path}/informer.pt"))
-            
-            # Load LLMs
-            if 'finbert' in self.config:
-                self.finbert = AutoModel.from_pretrained(f"{path}/finbert")
-            if 'bloomberggpt' in self.config:
-                self.bloomberggpt = AutoModel.from_pretrained(f"{path}/bloomberggpt")
-            
-            logger.info(f"Loaded models from {path}")
+            while True:
+                # Process data
+                # This is a placeholder - implement actual data processing
+                
+                # Sleep briefly
+                await asyncio.sleep(0.1)
+                
+        except Exception as e:
+            logger.error(f"Error running ML ecosystem: {str(e)}")
+        finally:
+            self.close()
+    
+    def close(self):
+        """Close all models."""
+        try:
+            # Save models
+            torch.save(self.lstm.state_dict(), 'models/lstm.pth')
+            torch.save(self.transformer.state_dict(), 'models/transformer.pth')
+            torch.save(self.tft.state_dict(), 'models/tft.pth')
+            torch.save(self.nbeats.state_dict(), 'models/nbeats.pth')
+            torch.save(self.ppo.state_dict(), 'models/ppo.pth')
+            torch.save(self.maml.state_dict(), 'models/maml.pth')
             
         except Exception as e:
-            logger.error(f"Error loading models: {str(e)}") 
+            logger.error(f"Error closing models: {str(e)}")
+
+if __name__ == "__main__":
+    # Load configuration
+    config = get_config()
+    
+    # Create ML ecosystem
+    ecosystem = MLEcosystem(config)
+    
+    # Run ecosystem
+    asyncio.run(ecosystem.run()) 

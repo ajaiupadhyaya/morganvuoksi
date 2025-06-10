@@ -1,323 +1,389 @@
 """
-Quantitative research infrastructure for systematic trading.
+Research infrastructure for quantitative analysis.
 """
-import numpy as np
+import asyncio
+import logging
+from typing import Dict, List, Optional, Union
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union
-import statsmodels.api as sm
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.vector_ar.var_model import VAR
-from arch import arch_model
+import numpy as np
+from datetime import datetime, timedelta
 from scipy import stats
+from statsmodels.tsa.stattools import adfuller, coint
+from statsmodels.regression.linear_model import OLS
+from arch import arch_model
+import cvxpy as cp
+import riskfolio as rp
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+
 from ..utils.logging import setup_logger
+from ..config import get_config
 
 logger = setup_logger(__name__)
 
 class ResearchInfrastructure:
-    """Quantitative research infrastructure."""
+    """Research infrastructure for quantitative analysis."""
     
     def __init__(self, config: Dict):
         self.config = config
-        self.factors = {}
-        self.risk_models = {}
+        self._setup_analyzers()
     
-    def compute_factors(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
-        """
-        Compute factor exposures.
-        
-        Args:
-            data: Market data
-            
-        Returns:
-            Dictionary of factor exposures
-        """
+    def _setup_analyzers(self):
+        """Setup research analyzers."""
+        self.analyzers = {
+            'factor_modeling': self._analyze_factors,
+            'risk_analytics': self._analyze_risk,
+            'regime_switching': self._analyze_regimes,
+            'cointegration': self._analyze_cointegration
+        }
+    
+    async def _analyze_factors(self, data: pd.DataFrame) -> Dict:
+        """Analyze factor models."""
         try:
-            # Size factor
-            self.factors['size'] = np.log(data['market_cap'])
+            # Fama-French factors
+            if 'fama_french' in self.config['research']:
+                ff_factors = self._calculate_fama_french(data)
             
-            # Value factor
-            self.factors['value'] = data['book_value'] / data['market_cap']
+            # Statistical factors
+            if 'statistical' in self.config['research']:
+                stat_factors = self._calculate_statistical_factors(data)
             
-            # Momentum factor
-            self.factors['momentum'] = data['returns'].rolling(window=252).mean()
+            # Combine results
+            results = {
+                'fama_french': ff_factors if 'fama_french' in self.config['research'] else {},
+                'statistical': stat_factors if 'statistical' in self.config['research'] else {}
+            }
             
-            # Volatility factor
-            self.factors['volatility'] = data['returns'].rolling(window=252).std()
-            
-            # Quality factor
-            self.factors['quality'] = data['roe'] * data['profit_margin']
-            
-            # Growth factor
-            self.factors['growth'] = data['revenue_growth'] * data['earnings_growth']
-            
-            return self.factors
+            return results
             
         except Exception as e:
-            logger.error(f"Error computing factors: {str(e)}")
+            logger.error(f"Error analyzing factors: {str(e)}")
             return {}
     
-    def compute_statistical_factors(self, data: pd.DataFrame,
-                                  n_factors: int = 5) -> pd.DataFrame:
-        """
-        Compute statistical factors using PCA.
-        
-        Args:
-            data: Market data
-            n_factors: Number of factors to compute
-            
-        Returns:
-            Statistical factors
-        """
+    def _calculate_fama_french(self, data: pd.DataFrame) -> Dict:
+        """Calculate Fama-French factors."""
         try:
-            # Standardize data
-            scaler = StandardScaler()
-            scaled_data = scaler.fit_transform(data)
+            # Market factor
+            market_factor = data['market_return'] - data['risk_free_rate']
             
-            # Compute PCA
-            pca = PCA(n_components=n_factors)
-            factors = pca.fit_transform(scaled_data)
+            # Size factor
+            size_factor = data['small_cap_return'] - data['large_cap_return']
             
-            # Create factor DataFrame
-            factor_df = pd.DataFrame(
-                factors,
-                columns=[f'factor_{i+1}' for i in range(n_factors)],
-                index=data.index
-            )
+            # Value factor
+            value_factor = data['high_bm_return'] - data['low_bm_return']
             
-            # Store factor loadings
-            self.factor_loadings = pd.DataFrame(
-                pca.components_,
-                columns=data.columns,
-                index=[f'factor_{i+1}' for i in range(n_factors)]
-            )
+            # Momentum factor
+            momentum_factor = data['high_momentum_return'] - data['low_momentum_return']
             
-            return factor_df
+            return {
+                'market': market_factor,
+                'size': size_factor,
+                'value': value_factor,
+                'momentum': momentum_factor
+            }
             
         except Exception as e:
-            logger.error(f"Error computing statistical factors: {str(e)}")
-            return pd.DataFrame()
+            logger.error(f"Error calculating Fama-French factors: {str(e)}")
+            return {}
     
-    def compute_risk_metrics(self, returns: pd.Series,
-                           confidence_level: float = 0.95) -> Dict:
-        """
-        Compute risk metrics.
-        
-        Args:
-            returns: Return series
-            confidence_level: Confidence level for VaR/CVaR
-            
-        Returns:
-            Dictionary of risk metrics
-        """
+    def _calculate_statistical_factors(self, data: pd.DataFrame) -> Dict:
+        """Calculate statistical factors."""
         try:
-            # Value at Risk
-            var = np.percentile(returns, (1 - confidence_level) * 100)
+            # Standardize returns
+            returns = data.select_dtypes(include=[np.number])
+            scaler = StandardScaler()
+            returns_scaled = scaler.fit_transform(returns)
             
-            # Conditional Value at Risk
-            cvar = returns[returns <= var].mean()
+            # PCA
+            pca = PCA(n_components=5)
+            factors = pca.fit_transform(returns_scaled)
             
-            # Maximum Drawdown
-            cum_returns = (1 + returns).cumprod()
-            rolling_max = cum_returns.expanding().max()
-            drawdowns = cum_returns / rolling_max - 1
-            max_drawdown = drawdowns.min()
+            # Calculate factor returns
+            factor_returns = pd.DataFrame(
+                factors,
+                columns=[f'factor_{i+1}' for i in range(5)],
+                index=returns.index
+            )
+            
+            return {
+                'factors': factor_returns,
+                'explained_variance': pca.explained_variance_ratio_
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating statistical factors: {str(e)}")
+            return {}
+    
+    async def _analyze_risk(self, data: pd.DataFrame) -> Dict:
+        """Analyze risk metrics."""
+        try:
+            # Calculate returns
+            returns = data.pct_change().dropna()
+            
+            # VaR
+            var_95 = np.percentile(returns, 5)
+            var_99 = np.percentile(returns, 1)
+            
+            # CVaR
+            cvar_95 = returns[returns <= var_95].mean()
+            cvar_99 = returns[returns <= var_99].mean()
             
             # Volatility
             volatility = returns.std() * np.sqrt(252)
             
-            # Sharpe Ratio
-            risk_free_rate = self.config.get('risk_free_rate', 0.02)
-            sharpe_ratio = (returns.mean() * 252 - risk_free_rate) / volatility
+            # GARCH
+            garch_model = arch_model(returns, vol='Garch', p=1, q=1)
+            garch_results = garch_model.fit(disp='off')
             
-            # Sortino Ratio
-            downside_returns = returns[returns < 0]
-            downside_volatility = downside_returns.std() * np.sqrt(252)
-            sortino_ratio = (returns.mean() * 252 - risk_free_rate) / downside_volatility
+            # Stress testing
+            stress_scenarios = self._run_stress_tests(returns)
             
             return {
-                'var': var,
-                'cvar': cvar,
-                'max_drawdown': max_drawdown,
+                'var_95': var_95,
+                'var_99': var_99,
+                'cvar_95': cvar_95,
+                'cvar_99': cvar_99,
                 'volatility': volatility,
-                'sharpe_ratio': sharpe_ratio,
-                'sortino_ratio': sortino_ratio
+                'garch': garch_results,
+                'stress_tests': stress_scenarios
             }
             
         except Exception as e:
-            logger.error(f"Error computing risk metrics: {str(e)}")
+            logger.error(f"Error analyzing risk: {str(e)}")
             return {}
     
-    def compute_regime_switching(self, returns: pd.Series,
-                               n_regimes: int = 2) -> Dict:
-        """
-        Compute regime switching model.
-        
-        Args:
-            returns: Return series
-            n_regimes: Number of regimes
-            
-        Returns:
-            Regime switching results
-        """
+    def _run_stress_tests(self, returns: pd.DataFrame) -> Dict:
+        """Run stress test scenarios."""
         try:
-            # Fit Markov switching model
-            model = sm.tsa.MarkovRegression(
-                returns,
-                k_regimes=n_regimes,
-                switching_variance=True
-            )
-            results = model.fit()
+            # Historical scenarios
+            historical = {
+                '2008_crisis': returns['2008-09-01':'2009-03-31'].min(),
+                '2020_covid': returns['2020-02-15':'2020-04-15'].min()
+            }
             
-            # Get regime probabilities
-            regime_probs = results.smoothed_marginal_probabilities
-            
-            # Get regime parameters
-            regime_params = {
-                'mean': results.regime_means,
-                'variance': results.regime_variances,
-                'transition': results.regime_transition
+            # Hypothetical scenarios
+            hypothetical = {
+                'market_crash': returns.mean() - 3 * returns.std(),
+                'volatility_spike': returns.std() * 3
             }
             
             return {
-                'probabilities': regime_probs,
-                'parameters': regime_params
+                'historical': historical,
+                'hypothetical': hypothetical
             }
             
         except Exception as e:
-            logger.error(f"Error computing regime switching: {str(e)}")
+            logger.error(f"Error running stress tests: {str(e)}")
             return {}
     
-    def compute_cointegration(self, data: pd.DataFrame) -> Dict:
-        """
-        Compute cointegration relationships.
-        
-        Args:
-            data: Price data
-            
-        Returns:
-            Cointegration results
-        """
+    async def _analyze_regimes(self, data: pd.DataFrame) -> Dict:
+        """Analyze regime switching."""
         try:
-            # Test for cointegration
-            results = {}
-            for col1 in data.columns:
-                for col2 in data.columns:
-                    if col1 < col2:
-                        # Compute spread
-                        spread = data[col1] - data[col2]
-                        
-                        # Test for stationarity
-                        adf_result = adfuller(spread)
-                        
-                        if adf_result[1] < 0.05:  # Stationary at 5% level
-                            results[f"{col1}-{col2}"] = {
-                                'adf_statistic': adf_result[0],
-                                'p_value': adf_result[1],
-                                'spread': spread
-                            }
+            # Calculate returns
+            returns = data.pct_change().dropna()
             
-            return results
+            # Regime detection
+            regimes = self._detect_regimes(returns)
+            
+            # Regime characteristics
+            characteristics = self._analyze_regime_characteristics(returns, regimes)
+            
+            return {
+                'regimes': regimes,
+                'characteristics': characteristics
+            }
             
         except Exception as e:
-            logger.error(f"Error computing cointegration: {str(e)}")
+            logger.error(f"Error analyzing regimes: {str(e)}")
             return {}
     
-    def compute_volatility_forecast(self, returns: pd.Series,
-                                  model: str = 'garch') -> pd.Series:
-        """
-        Compute volatility forecast.
-        
-        Args:
-            returns: Return series
-            model: Volatility model to use
-            
-        Returns:
-            Volatility forecast
-        """
+    def _detect_regimes(self, returns: pd.DataFrame) -> pd.Series:
+        """Detect market regimes."""
         try:
-            if model == 'garch':
-                # Fit GARCH model
-                garch = arch_model(returns, vol='Garch', p=1, q=1)
-                results = garch.fit(disp='off')
-                
-                # Get forecast
-                forecast = results.forecast(horizon=1)
-                volatility = np.sqrt(forecast.variance.values[-1, 0])
-                
-            elif model == 'ewma':
-                # Compute EWMA volatility
-                lambda_ = 0.94  # RiskMetrics lambda
-                volatility = returns.ewm(alpha=1-lambda_).std().iloc[-1]
+            # Calculate volatility
+            volatility = returns.rolling(window=20).std()
             
-            return volatility
+            # Detect regimes
+            regimes = pd.Series(index=returns.index)
+            regimes[volatility > volatility.quantile(0.75)] = 'high_vol'
+            regimes[volatility < volatility.quantile(0.25)] = 'low_vol'
+            regimes[volatility.between(volatility.quantile(0.25),
+                                    volatility.quantile(0.75))] = 'normal'
+            
+            return regimes
             
         except Exception as e:
-            logger.error(f"Error computing volatility forecast: {str(e)}")
+            logger.error(f"Error detecting regimes: {str(e)}")
             return pd.Series()
     
-    def compute_correlation_forecast(self, returns: pd.DataFrame,
-                                   method: str = 'ewma') -> pd.DataFrame:
-        """
-        Compute correlation forecast.
-        
-        Args:
-            returns: Return data
-            method: Correlation estimation method
-            
-        Returns:
-            Correlation forecast
-        """
+    def _analyze_regime_characteristics(self, returns: pd.DataFrame,
+                                      regimes: pd.Series) -> Dict:
+        """Analyze regime characteristics."""
         try:
-            if method == 'ewma':
-                # Compute EWMA correlation
-                lambda_ = 0.94  # RiskMetrics lambda
-                correlation = returns.ewm(alpha=1-lambda_).corr().iloc[-len(returns.columns):]
+            characteristics = {}
             
-            elif method == 'dcc':
-                # Implement DCC-GARCH
-                pass
-            
-            return correlation
-            
-        except Exception as e:
-            logger.error(f"Error computing correlation forecast: {str(e)}")
-            return pd.DataFrame()
-    
-    def compute_stress_test(self, portfolio: pd.Series,
-                          scenarios: Dict[str, float]) -> Dict:
-        """
-        Compute stress test results.
-        
-        Args:
-            portfolio: Portfolio weights
-            scenarios: Dictionary of scenario returns
-            
-        Returns:
-            Stress test results
-        """
-        try:
-            results = {}
-            
-            for scenario, returns in scenarios.items():
-                # Compute scenario return
-                scenario_return = (portfolio * returns).sum()
+            for regime in regimes.unique():
+                # Filter returns for regime
+                regime_returns = returns[regimes == regime]
                 
-                # Compute scenario risk
-                scenario_risk = np.sqrt(
-                    portfolio.dot(self.compute_correlation_forecast(returns))
-                    .dot(portfolio)
-                )
-                
-                results[scenario] = {
-                    'return': scenario_return,
-                    'risk': scenario_risk,
-                    'sharpe': scenario_return / scenario_risk
+                # Calculate statistics
+                characteristics[regime] = {
+                    'mean': regime_returns.mean(),
+                    'std': regime_returns.std(),
+                    'skew': regime_returns.skew(),
+                    'kurtosis': regime_returns.kurtosis()
                 }
             
-            return results
+            return characteristics
             
         except Exception as e:
-            logger.error(f"Error computing stress test: {str(e)}")
-            return {} 
+            logger.error(f"Error analyzing regime characteristics: {str(e)}")
+            return {}
+    
+    async def _analyze_cointegration(self, data: pd.DataFrame) -> Dict:
+        """Analyze cointegration."""
+        try:
+            # Test for cointegration
+            cointegrated_pairs = self._find_cointegrated_pairs(data)
+            
+            # Calculate spread
+            spreads = self._calculate_spreads(data, cointegrated_pairs)
+            
+            # Test for mean reversion
+            mean_reversion = self._test_mean_reversion(spreads)
+            
+            return {
+                'cointegrated_pairs': cointegrated_pairs,
+                'spreads': spreads,
+                'mean_reversion': mean_reversion
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing cointegration: {str(e)}")
+            return {}
+    
+    def _find_cointegrated_pairs(self, data: pd.DataFrame) -> List[Tuple[str, str]]:
+        """Find cointegrated pairs."""
+        try:
+            cointegrated_pairs = []
+            
+            # Test all possible pairs
+            for i in range(len(data.columns)):
+                for j in range(i+1, len(data.columns)):
+                    # Get price series
+                    series1 = data.iloc[:, i]
+                    series2 = data.iloc[:, j]
+                    
+                    # Test for cointegration
+                    score, pvalue, _ = coint(series1, series2)
+                    
+                    if pvalue < 0.05:
+                        cointegrated_pairs.append(
+                            (data.columns[i], data.columns[j])
+                        )
+            
+            return cointegrated_pairs
+            
+        except Exception as e:
+            logger.error(f"Error finding cointegrated pairs: {str(e)}")
+            return []
+    
+    def _calculate_spreads(self, data: pd.DataFrame,
+                         pairs: List[Tuple[str, str]]) -> pd.DataFrame:
+        """Calculate spreads for cointegrated pairs."""
+        try:
+            spreads = pd.DataFrame(index=data.index)
+            
+            for pair in pairs:
+                # Get price series
+                series1 = data[pair[0]]
+                series2 = data[pair[1]]
+                
+                # Calculate spread
+                spread = series1 - series2
+                spreads[f'{pair[0]}_{pair[1]}'] = spread
+            
+            return spreads
+            
+        except Exception as e:
+            logger.error(f"Error calculating spreads: {str(e)}")
+            return pd.DataFrame()
+    
+    def _test_mean_reversion(self, spreads: pd.DataFrame) -> Dict:
+        """Test for mean reversion in spreads."""
+        try:
+            mean_reversion = {}
+            
+            for column in spreads.columns:
+                # Augmented Dickey-Fuller test
+                adf_result = adfuller(spreads[column].dropna())
+                
+                mean_reversion[column] = {
+                    'adf_statistic': adf_result[0],
+                    'p_value': adf_result[1],
+                    'is_stationary': adf_result[1] < 0.05
+                }
+            
+            return mean_reversion
+            
+        except Exception as e:
+            logger.error(f"Error testing mean reversion: {str(e)}")
+            return {}
+    
+    async def analyze(self, data: pd.DataFrame, analysis_type: str) -> Dict:
+        """
+        Run research analysis.
+        
+        Args:
+            data: Input data
+            analysis_type: Type of analysis to run
+            
+        Returns:
+            Analysis results
+        """
+        try:
+            if analysis_type in self.analyzers:
+                results = await self.analyzers[analysis_type](data)
+                return results
+            else:
+                logger.warning(f"Unknown analysis type: {analysis_type}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Error running analysis: {str(e)}")
+            return {}
+    
+    async def run(self):
+        """Run research infrastructure."""
+        try:
+            while True:
+                # Process data
+                # This is a placeholder - implement actual data processing
+                
+                # Sleep briefly
+                await asyncio.sleep(0.1)
+                
+        except Exception as e:
+            logger.error(f"Error running research infrastructure: {str(e)}")
+        finally:
+            self.close()
+    
+    def close(self):
+        """Close research infrastructure."""
+        try:
+            # Save results
+            # This is a placeholder - implement actual saving
+            pass
+            
+        except Exception as e:
+            logger.error(f"Error closing research infrastructure: {str(e)}")
+
+if __name__ == "__main__":
+    # Load configuration
+    config = get_config()
+    
+    # Create research infrastructure
+    infrastructure = ResearchInfrastructure(config)
+    
+    # Run infrastructure
+    asyncio.run(infrastructure.run()) 
