@@ -1,217 +1,108 @@
-# API Monitoring Dashboard
+# MorganVuoksi - Institutional-Grade Quantitative Trading Platform
 
-A real-time API monitoring dashboard built with Streamlit that tracks API health, performance metrics, and provides visualizations.
+MorganVuoksi is a comprehensive quantitative trading platform designed for institutional investors, combining advanced machine learning models, real-time market data processing, and high-performance trading infrastructure.
 
 ## Features
 
-- Real-time API health monitoring
-- Performance metrics tracking (uptime, latency, error rates)
-- Interactive visualizations
-- Historical data analysis
-- Configurable monitoring intervals
-- Redis-based data storage
+### Data Infrastructure
+- Real-time market data from Bloomberg, Refinitiv, Interactive Brokers
+- Historical data from Quandl, S&P Capital IQ, CRSP
+- Alternative data from RavenPack, FRED, SEC EDGAR
+- High-performance data pipeline with Kafka, Redis, InfluxDB
 
-## Prerequisites
+### ML Model Ecosystem
+- Financial LLMs (FinBERT, BloombergGPT)
+- Advanced time series models (TFT, N-BEATS, DeepAR, WaveNet)
+- Reinforcement learning (PPO)
+- Meta-learning (MAML)
 
-- macOS (tested on macOS 24.5.0)
-- Python 3.8+
-- Redis server
-- API keys for monitored services
+### Research Infrastructure
+- Factor modeling (Fama-French, statistical factors)
+- Risk analytics (VaR, CVaR, stress testing)
+- Regime switching models
+- Cointegration analysis
 
-## Detailed Installation Guide
+### Trading Infrastructure
+- High-performance computing with Ray
+- Real-time trading with ZeroMQ
+- Order management with IB and Alpaca
+- Portfolio optimization
+- Performance monitoring
 
-### 1. Install Homebrew (if not already installed)
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+## System Requirements
 
-### 2. Install Python and Redis
-```bash
-# Install Python
-brew install python@3.11
+- macOS 24.5.0 or later
+- Python 3.11 or later
+- 16GB RAM minimum (32GB recommended)
+- 100GB free disk space
+- Stable internet connection
 
-# Install Redis
-brew install redis
+## Quick Start
 
-# Start Redis service
-brew services start redis
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/morganvuoksi.git
+   cd morganvuoksi
+   ```
 
-# Verify Redis is running
-redis-cli ping  # Should return PONG
-```
+2. **Create and activate virtual environment**
+   ```bash
+   python3.11 -m venv .venv
+   source .venv/bin/activate
+   ```
 
-### 3. Clone and Setup Project
-```bash
-# Clone the repository
-git clone <repository-url>
-cd api-monitoring-dashboard
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
+   ```
 
-# Create and activate virtual environment
-python3.11 -m venv venv
-source venv/bin/activate
+4. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and settings
+   ```
 
-# Install dependencies
-pip install -r requirements.txt
-```
+5. **Start services**
+   ```bash
+   # Start data pipeline
+   python src/data/pipeline.py
 
-### 4. API Key Setup
+   # Start ML models
+   python src/ml/ecosystem.py
 
-#### Weather API (OpenWeatherMap)
-1. Go to https://openweathermap.org/
-2. Sign up for a free account
-3. Go to "My API Keys" section
-4. Copy your API key
-
-#### News API
-1. Go to https://newsapi.org/
-2. Sign up for a free account
-3. Go to "API Keys" section
-4. Copy your API key
-
-#### GitHub API
-- No API key required for basic status checks
-- For higher rate limits, create a personal access token:
-  1. Go to GitHub Settings > Developer Settings > Personal Access Tokens
-  2. Generate new token with `repo` scope
-  3. Copy the token
-
-### 5. Environment Configuration
-
-Create a `.env` file in the project root:
-```bash
-touch .env
-```
-
-Add your API keys to `.env`:
-```
-WEATHER_API_KEY=your_weather_api_key_here
-NEWS_API_KEY=your_news_api_key_here
-GITHUB_TOKEN=your_github_token_here  # Optional
-```
-
-### 6. Configure Monitoring
-
-Edit `config.yaml` to customize your monitoring setup:
-```yaml
-# Example configuration
-apis:
-  weather_api:
-    endpoint: https://api.openweathermap.org/data/2.5/weather
-    headers:
-      appid: ${WEATHER_API_KEY}
-    params:
-      q: "London"  # Default city to check
-      units: "metric"
-  
-  news_api:
-    endpoint: https://newsapi.org/v2/top-headlines
-    headers:
-      X-Api-Key: ${NEWS_API_KEY}
-    params:
-      country: "us"  # Default country for news
-  
-  github_api:
-    endpoint: https://api.github.com/status
-    headers:
-      Accept: application/vnd.github.v3+json
-      Authorization: token ${GITHUB_TOKEN}  # Optional
-```
-
-### 7. Running the Application
-
-1. Ensure Redis is running:
-```bash
-# Check Redis status
-brew services list | grep redis
-
-# If not running, start it
-brew services start redis
-```
-
-2. Start the dashboard:
-```bash
-# Make sure you're in the virtual environment
-source venv/bin/activate
-
-# Run the dashboard
-streamlit run src/main.py
-```
-
-3. Access the dashboard:
-- Open your browser
-- Go to http://localhost:8501
-
-### 8. Troubleshooting
-
-#### Redis Connection Issues
-```bash
-# Check Redis logs
-tail -f /usr/local/var/log/redis.log
-
-# Restart Redis if needed
-brew services restart redis
-```
-
-#### Port Conflicts
-If port 8501 is in use:
-```bash
-# Find process using port 8501
-lsof -i :8501
-
-# Kill the process
-kill -9 <PID>
-```
-
-#### API Rate Limits
-- Free tier limits:
-  - OpenWeatherMap: 60 calls/minute
-  - News API: 100 calls/day
-  - GitHub: 60 calls/hour (without token)
-- Adjust `check_interval` in `config.yaml` accordingly
-
-### 9. Maintenance
-
-#### Updating Dependencies
-```bash
-# Update pip
-pip install --upgrade pip
-
-# Update requirements
-pip install -r requirements.txt --upgrade
-```
-
-#### Clearing Redis Data
-```bash
-# Connect to Redis CLI
-redis-cli
-
-# Clear all data
-FLUSHALL
-
-# Exit Redis CLI
-exit
-```
-
-#### Logs
-- Application logs: `logs/app.log`
-- Redis logs: `/usr/local/var/log/redis.log`
+   # Start trading system
+   python src/trading/infrastructure.py
+   ```
 
 ## Project Structure
 
 ```
-.
-├── config.yaml           # Configuration file
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
-├── .env                 # Environment variables (create this)
-└── src/
-    ├── main.py          # Main application entry point
-    ├── api/
-    │   ├── monitor.py   # API monitoring logic
-    │   └── dashboard.py # Streamlit dashboard
-    └── utils/
-        └── logging.py   # Logging configuration
+morganvuoksi/
+├── src/
+│   ├── data/           # Data infrastructure
+│   ├── ml/            # ML model ecosystem
+│   ├── research/      # Research infrastructure
+│   ├── trading/       # Trading infrastructure
+│   └── utils/         # Utility functions
+├── config/            # Configuration files
+├── tests/            # Test suite
+├── docs/             # Documentation
+├── scripts/          # Utility scripts
+├── logs/             # Log files
+├── models/           # Trained models
+├── data/             # Data storage
+├── .env              # Environment variables
+├── requirements.txt  # Production dependencies
+└── requirements-dev.txt  # Development dependencies
 ```
+
+## Documentation
+
+- [Deployment Guide](DEPLOYMENT.md)
+- [API Documentation](docs/api.md)
+- [User Guide](docs/user_guide.md)
+- [Developer Guide](docs/developer_guide.md)
 
 ## Contributing
 
@@ -223,4 +114,11 @@ exit
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
+
+## Support
+
+For technical support:
+1. Check the documentation in `docs/`
+2. Review system logs in `logs/`
+3. Contact support at support@morganvuoksi.com
