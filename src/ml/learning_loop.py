@@ -14,11 +14,24 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import precision_score, roc_auc_score
 import xgboost as xgb
 import lightgbm as lgb
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer
+
+try:  # Optional TensorFlow dependency
+    from tensorflow.keras.models import Sequential, load_model  # type: ignore
+    from tensorflow.keras.layers import LSTM, Dense, Dropout  # type: ignore
+except Exception:  # pragma: no cover - TensorFlow not installed
+    Sequential = None
+
+    def load_model(*args, **kwargs):  # type: ignore
+        raise ImportError("TensorFlow is required for this feature")
+
+    LSTM = Dense = Dropout = None
+
+try:  # Optional Transformers dependency
+    from transformers import AutoModel, AutoTokenizer  # type: ignore
+except Exception:  # pragma: no cover - Transformers not installed
+    AutoModel = AutoTokenizer = None
 
 from .safety import ModelSafetyMonitor, CrossValidator, PositionSizer
 
@@ -50,7 +63,7 @@ class ModelRegistry:
                 joblib.dump(model, self.model_dir / f"{model_id}.joblib")
             elif isinstance(model, (xgb.XGBClassifier, lgb.LGBMClassifier)):
                 model.save_model(str(self.model_dir / f"{model_id}.json"))
-            elif isinstance(model, Sequential):
+            elif Sequential is not None and isinstance(model, Sequential):
                 model.save(self.model_dir / f"{model_id}.h5")
             elif isinstance(model, nn.Module):
                 torch.save(model.state_dict(), self.model_dir / f"{model_id}.pt")
@@ -89,7 +102,7 @@ class ModelRegistry:
                 else:
                     model = lgb.LGBMClassifier()
                     model.load_model(str(model_path.with_suffix('.json')))
-            elif model_path.with_suffix('.h5').exists():
+            elif model_path.with_suffix('.h5').exists() and Sequential is not None:
                 model = load_model(model_path.with_suffix('.h5'))
             elif model_path.with_suffix('.pt').exists():
                 # Load PyTorch model

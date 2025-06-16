@@ -1,6 +1,6 @@
 # src/config.py
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import os
@@ -56,7 +56,9 @@ class Paths:
 @dataclass
 class MarketDataConfig:
     """Market data configuration."""
-    data_providers: List[str] = ['alpaca', 'polygon', 'yfinance']
+    data_providers: List[str] = field(
+        default_factory=lambda: ['alpaca', 'polygon', 'yfinance']
+    )
     update_frequency: str = '1min'
     max_retries: int = 3
     timeout: int = 30
@@ -128,11 +130,11 @@ class ModelConfig:
 @dataclass
 class Config:
     """Main configuration."""
-    api: APIConfig = APIConfig()
-    paths: Paths = Paths()
-    market_data: MarketDataConfig = MarketDataConfig()
-    trading: TradingConfig = TradingConfig()
-    model: ModelConfig = ModelConfig()
+    api: APIConfig = field(default_factory=APIConfig)
+    paths: Paths = field(default_factory=Paths)
+    market_data: MarketDataConfig = field(default_factory=MarketDataConfig)
+    trading: TradingConfig = field(default_factory=TradingConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
     
     def save(self, path: Optional[Path] = None) -> None:
         """
