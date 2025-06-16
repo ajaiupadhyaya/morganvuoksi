@@ -14,7 +14,10 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score, precision_score
 import torch
 import torch.nn as nn
-from tensorflow.keras.callbacks import EarlyStopping
+try:  # Optional TensorFlow dependency
+    from tensorflow.keras.callbacks import EarlyStopping  # type: ignore
+except Exception:  # pragma: no cover - TensorFlow not installed
+    EarlyStopping = None
 import warnings
 
 # Configure logging
@@ -226,20 +229,24 @@ class CrossValidator:
                 y_val = targets.iloc[val_idx]
                 
                 if is_deep_learning:
-                    # Deep learning with early stopping
+                    # Deep learning with optional early stopping
                     model_copy = self._clone_model(model)
-                    early_stopping = EarlyStopping(
-                        monitor='val_loss',
-                        patience=self.early_stopping_rounds,
-                        min_delta=self.min_delta,
-                        restore_best_weights=True
-                    )
-                    
-                    # Train with early stopping
+                    callbacks = []
+                    if EarlyStopping is not None:
+                        callbacks.append(
+                            EarlyStopping(
+                                monitor='val_loss',
+                                patience=self.early_stopping_rounds,
+                                min_delta=self.min_delta,
+                                restore_best_weights=True,
+                            )
+                        )
+
                     model_copy.fit(
-                        X_train, y_train,
+                        X_train,
+                        y_train,
                         validation_data=(X_val, y_val),
-                        callbacks=[early_stopping]
+                        callbacks=callbacks,
                     )
                     
                     # Get predictions
