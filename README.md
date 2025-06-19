@@ -63,17 +63,24 @@ MorganVuoksi is a comprehensive quantitative trading platform designed for insti
    # Edit .env with your API keys and settings
    ```
 
-5. **Start services**
+5. **Run the automated pipeline**
    ```bash
-   # Start data pipeline
-   python src/data/pipeline.py
-
-   # Start ML models
-   python src/ml/ecosystem.py
-
-   # Start trading system
-   python src/trading/infrastructure.py
+   python run_all.py
    ```
+
+## CLI Usage
+
+After installation you can invoke the main entry points via the ``quantlab`` command:
+
+```bash
+quantlab fetch-data --symbol AAPL --start 2024-01-01 --end 2024-03-01
+quantlab train-model --model xgboost --data data/AAPL_data.csv
+quantlab run-backtest --data data/AAPL_data.csv
+quantlab optimize-portfolio --data data/AAPL_data.csv
+quantlab build-dcf --symbol AAPL
+quantlab live-trade --symbol AAPL --strike 150 --expiry 2025-06-20
+quantlab generate-report
+```
 
 ## Project Structure
 
