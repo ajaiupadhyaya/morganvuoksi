@@ -1,4 +1,5 @@
 """Unified CLI for MorganVuoksi pipelines."""
+
 import argparse
 import asyncio
 from pathlib import Path
@@ -99,8 +100,6 @@ def generate_report(args) -> None:
     out_path = report_dir / "trades.html"
     trades.to_html(out_path, index=False)
     logger.info(f"Report saved to {out_path}")
-
-
 
 
 def main():
