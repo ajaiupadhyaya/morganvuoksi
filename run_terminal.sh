@@ -1,19 +1,15 @@
 #!/bin/bash
 
 # MorganVuoksi Terminal Startup Script
-# This script sets up and runs the Bloomberg-style quantitative trading terminal
+# Bloomberg-style quantitative trading terminal
 
 echo "🚀 Starting MorganVuoksi Terminal..."
-
-# Check if Python is installed
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 is not installed. Please install Python 3.8+ first."
-    exit 1
-fi
+echo "📈 Bloomberg-style Quantitative Trading Terminal"
+echo ""
 
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
-    echo "📦 Creating virtual environment..."
+    echo "⚠️  Virtual environment not found. Creating one..."
     python3 -m venv .venv
 fi
 
@@ -21,24 +17,27 @@ fi
 echo "🔧 Activating virtual environment..."
 source .venv/bin/activate
 
-# Install dependencies
-echo "📥 Installing dependencies..."
+# Install/upgrade dependencies
+echo "📦 Installing dependencies..."
+pip install --upgrade pip
 pip install -r requirements-dashboard.txt
 
-# Check if config file exists
-if [ ! -f "config/config.yaml" ]; then
-    echo "⚠️  Warning: config/config.yaml not found. Using default configuration."
+# Check if required API keys are set
+echo "🔑 Checking API configuration..."
+if [ -z "$ALPACA_API_KEY" ] && [ -z "$POLYGON_API_KEY" ]; then
+    echo "⚠️  Warning: No API keys found. Some features may be limited."
+    echo "   Set ALPACA_API_KEY, POLYGON_API_KEY, or other API keys for full functionality."
 fi
 
-# Set environment variables
-export STREAMLIT_SERVER_PORT=8501
-export STREAMLIT_SERVER_ADDRESS=0.0.0.0
-export STREAMLIT_SERVER_HEADLESS=true
+# Create logs directory if it doesn't exist
+mkdir -p logs
 
-# Run the terminal
+# Start the terminal
 echo "🎯 Launching MorganVuoksi Terminal..."
-echo "📊 Dashboard will be available at: http://localhost:8501"
-echo "🛑 Press Ctrl+C to stop the terminal"
+echo "🌐 Terminal will be available at: http://localhost:8501"
+echo "📱 Press Ctrl+C to stop the terminal"
 echo ""
 
-streamlit run dashboard/terminal.py 
+# Run the terminal
+cd dashboard
+streamlit run terminal.py --server.port 8501 --server.address 0.0.0.0 --server.headless true 

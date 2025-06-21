@@ -112,15 +112,15 @@ def main():
         
         # Run different optimization strategies
         strategies = {
-            'Mean-Variance': optimizer.mean_variance_optimize(returns_df),
-            'Risk Parity': optimizer.risk_parity_optimize(returns_df),
-            'CVaR': optimizer.cvar_optimize(returns_df)
+            'Mean-Variance': optimizer.optimize_portfolio(returns_df, method="mean_variance"),
+            'Risk Parity': optimizer.optimize_portfolio(returns_df, method="risk_parity"),
+            'CVaR': optimizer.optimize_portfolio(returns_df, method="cvar")
         }
         
         # Plot and save results
-        for name, weights in strategies.items():
-            optimizer.plot_optimization_results(weights, returns_df, name)
-            optimizer.save_weights(weights, f"{name.lower().replace(' ', '_')}_weights.parquet")
+        for name, strategy in strategies.items():
+            optimizer.plot_optimization_results(strategy['weights'], returns_df, name)
+            optimizer.save_weights(strategy['weights'], f"{name.lower().replace(' ', '_')}_weights.parquet")
         
         logger.info("Portfolio optimization completed successfully")
         
@@ -150,620 +150,391 @@ class OptimizationConstraints:
     min_holding_period: int = 5
     max_holding_period: int = 20
 
+@dataclass
+class OptimizationConfig:
+    """Configuration for portfolio optimization."""
+    risk_free_rate: float = 0.02
+    target_return: Optional[float] = None
+    target_volatility: Optional[float] = None
+    max_position_size: float = 0.3
+    min_position_size: float = 0.0
+    max_sector_exposure: float = 0.4
+    max_factor_exposure: float = 0.3
+    transaction_costs: float = 0.001
+    rebalance_frequency: str = 'monthly'
+
 class PortfolioOptimizer:
-    """Advanced portfolio optimization with risk management."""
+    """Advanced portfolio optimizer with multiple strategies."""
     
-    def __init__(
-        self,
-        constraints: Optional[OptimizationConstraints] = None,
-        lookback_period: int = 252,
-        n_simulations: int = 1000,
-        random_state: int = 42
-    ):
-        """
-        Initialize portfolio optimizer.
+    def __init__(self, config: OptimizationConfig = None):
+        self.config = config or OptimizationConfig()
         
-        Args:
-            constraints: Optimization constraints
-            lookback_period: Lookback period for calculations
-            n_simulations: Number of simulations for CVaR
-            random_state: Random state for reproducibility
-        """
-        self.constraints = constraints or OptimizationConstraints()
-        self.lookback_period = lookback_period
-        self.n_simulations = n_simulations
-        self.random_state = random_state
+    def optimize_portfolio(self, returns: pd.DataFrame, method: str = "mean_variance", 
+                          risk_tolerance: str = "moderate", **kwargs) -> Dict:
+        """Main portfolio optimization method."""
         
-        # Initialize tracking
-        self.weights_history = {}
-        self.performance_metrics = {}
+        if method == "mean_variance":
+            return self._mean_variance_optimization(returns, risk_tolerance)
+        elif method == "black_litterman":
+            return self._black_litterman_optimization(returns, **kwargs)
+        elif method == "risk_parity":
+            return self._risk_parity_optimization(returns)
+        elif method == "maximum_sharpe":
+            return self._maximum_sharpe_optimization(returns)
+        elif method == "minimum_variance":
+            return self._minimum_variance_optimization(returns)
+        else:
+            raise ValueError(f"Unknown optimization method: {method}")
     
-    def calculate_metrics(
-        self,
-        returns: pd.DataFrame,
-        weights: pd.Series,
-        benchmark: Optional[pd.Series] = None,
-        factor_loadings: Optional[pd.DataFrame] = None,
-        factor_returns: Optional[pd.DataFrame] = None,
-        sector_exposures: Optional[pd.Series] = None
-    ) -> Dict[str, float]:
-        """
-        Calculate comprehensive performance metrics.
+    def _mean_variance_optimization(self, returns: pd.DataFrame, 
+                                   risk_tolerance: str) -> Dict:
+        """Mean-variance optimization."""
         
-        Args:
-            returns: Asset returns
-            weights: Portfolio weights
-            benchmark: Benchmark returns
-            factor_loadings: Factor loadings
-            factor_returns: Factor returns
-            sector_exposures: Sector exposures
+        # Calculate expected returns and covariance matrix
+        expected_returns = returns.mean() * 252  # Annualized
+        cov_matrix = returns.cov() * 252  # Annualized
         
-        Returns:
-            Dictionary of performance metrics
-        """
-        try:
-            # Portfolio returns
-            portfolio_returns = returns @ weights
-            
-            # Basic metrics
-            total_return = (1 + portfolio_returns).prod() - 1
-            annual_return = (1 + total_return) ** (252 / len(returns)) - 1
-            volatility = portfolio_returns.std() * np.sqrt(252)
-            sharpe_ratio = annual_return / volatility
-            
-            # Drawdown metrics
-            cum_returns = (1 + portfolio_returns).cumprod()
-            rolling_max = cum_returns.expanding().max()
-            drawdowns = cum_returns / rolling_max - 1
-            max_drawdown = drawdowns.min()
-            
-            # Risk metrics
-            var_95 = portfolio_returns.quantile(0.05)
-            cvar_95 = portfolio_returns[portfolio_returns <= var_95].mean()
-            downside_dev = portfolio_returns[portfolio_returns < 0].std() * np.sqrt(252)
-            sortino_ratio = annual_return / downside_dev
-            
-            # Factor metrics
-            factor_metrics = {}
-            if factor_loadings is not None and factor_returns is not None:
-                # Factor exposures
-                factor_exposures = factor_loadings.T @ weights
-                factor_metrics['factor_exposures'] = factor_exposures.to_dict()
-                
-                # Factor risk decomposition
-                factor_cov = factor_returns.cov()
-                factor_risk = np.sqrt(factor_exposures @ factor_cov @ factor_exposures)
-                factor_metrics['factor_risk'] = factor_risk
-                
-                # Factor contributions
-                factor_contributions = factor_exposures * (factor_returns.mean() * 252)
-                factor_metrics['factor_contributions'] = factor_contributions.to_dict()
-            
-            # Sector metrics
-            sector_metrics = {}
-            if sector_exposures is not None:
-                # Sector exposures
-                sector_metrics['sector_exposures'] = sector_exposures.to_dict()
-                
-                # Sector concentration
-                sector_metrics['sector_concentration'] = (sector_exposures ** 2).sum()
-            
-            # Liquidity metrics
-            turnover = self._calculate_turnover(weights)
-            liquidity_score = self._calculate_liquidity_score(returns, weights)
-            
-            # Diversification metrics
-            diversification_ratio = self._calculate_diversification_ratio(returns, weights)
-            
-            # Benchmark metrics
-            benchmark_metrics = {}
-            if benchmark is not None:
-                excess_return = portfolio_returns - benchmark
-                tracking_error = excess_return.std() * np.sqrt(252)
-                information_ratio = excess_return.mean() * np.sqrt(252) / tracking_error
-                beta = portfolio_returns.cov(benchmark) / benchmark.var()
-                alpha = annual_return - (
-                    benchmark.mean() * 252 +
-                    beta * (benchmark.mean() * 252)
-                )
-                
-                benchmark_metrics = {
-                    'tracking_error': tracking_error,
-                    'information_ratio': information_ratio,
-                    'beta': beta,
-                    'alpha': alpha
-                }
+        # Risk tolerance mapping
+        risk_tolerance_map = {
+            "conservative": 0.1,
+            "moderate": 0.2,
+            "aggressive": 0.3
+        }
+        
+        target_volatility = risk_tolerance_map.get(risk_tolerance, 0.2)
+        
+        # Optimization constraints
+        n_assets = len(returns.columns)
+        
+        # Objective function: minimize negative Sharpe ratio
+        def objective(weights):
+            portfolio_return = np.sum(expected_returns * weights)
+            portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
+            return -sharpe_ratio
+        
+        # Constraints
+        constraints = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1},  # Weights sum to 1
+            {'type': 'ineq', 'fun': lambda x: target_volatility - np.sqrt(np.dot(x.T, np.dot(cov_matrix, x)))}  # Volatility constraint
+        ]
+        
+        # Bounds
+        bounds = [(self.config.min_position_size, self.config.max_position_size) for _ in range(n_assets)]
+        
+        # Initial guess (equal weight)
+        initial_weights = np.array([1/n_assets] * n_assets)
+        
+        # Optimize
+        result = minimize(objective, initial_weights, method='SLSQP', 
+                        bounds=bounds, constraints=constraints)
+        
+        if result.success:
+            optimal_weights = result.x
+            portfolio_return = np.sum(expected_returns * optimal_weights)
+            portfolio_vol = np.sqrt(np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights)))
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
             
             return {
-                'total_return': total_return,
-                'annual_return': annual_return,
-                'volatility': volatility,
+                'weights': pd.Series(optimal_weights, index=returns.columns),
+                'expected_return': portfolio_return,
+                'volatility': portfolio_vol,
                 'sharpe_ratio': sharpe_ratio,
-                'max_drawdown': max_drawdown,
-                'var_95': var_95,
-                'cvar_95': cvar_95,
-                'sortino_ratio': sortino_ratio,
-                'turnover': turnover,
-                'liquidity_score': liquidity_score,
-                'diversification_ratio': diversification_ratio,
-                **factor_metrics,
-                **sector_metrics,
-                **benchmark_metrics
+                'method': 'mean_variance',
+                'risk_tolerance': risk_tolerance
             }
-            
-        except Exception as e:
-            logger.error(f"Error calculating metrics: {str(e)}")
-            return {}
+        else:
+            raise ValueError("Optimization failed")
     
-    def mean_variance_optimize(
-        self,
-        returns: pd.DataFrame,
-        target_volatility: Optional[float] = None,
-        factor_loadings: Optional[pd.DataFrame] = None,
-        factor_returns: Optional[pd.DataFrame] = None,
-        sector_exposures: Optional[pd.Series] = None
-    ) -> pd.Series:
-        """
-        Mean-variance optimization with constraints.
+    def _black_litterman_optimization(self, returns: pd.DataFrame, 
+                                    views: Dict = None, 
+                                    view_confidences: Dict = None) -> Dict:
+        """Black-Litterman optimization with investor views."""
         
-        Args:
-            returns: Asset returns
-            target_volatility: Target portfolio volatility
-            factor_loadings: Factor loadings
-            factor_returns: Factor returns
-            sector_exposures: Sector exposures
+        # Calculate market equilibrium returns
+        market_caps = self._get_market_caps(returns.columns)  # Placeholder
+        if market_caps is None:
+            market_caps = pd.Series([1/len(returns.columns)] * len(returns.columns), 
+                                   index=returns.columns)
         
-        Returns:
-            Optimal portfolio weights
-        """
-        try:
-            # Calculate expected returns and covariance
-            mu = returns.mean() * 252
-            sigma = returns.cov() * 252
-            
-            # Define variables
-            w = cp.Variable(len(returns.columns))
-            
-            # Define objective
-            if target_volatility is not None:
-                # Maximize return subject to volatility constraint
-                objective = cp.Maximize(mu @ w)
-                constraints = [
-                    cp.quad_form(w, sigma) <= target_volatility ** 2
-                ]
-            else:
-                # Maximize Sharpe ratio
-                objective = cp.Maximize(mu @ w / cp.sqrt(cp.quad_form(w, sigma)))
-                constraints = []
-            
-            # Add constraints
-            constraints.extend([
-                cp.sum(w) == 1,  # Full investment
-                w >= self.constraints.min_weight,  # Minimum weight
-                w <= self.constraints.max_weight,  # Maximum weight
-                cp.sum(cp.abs(w)) <= self.constraints.max_leverage  # Leverage limit
-            ])
-            
-            # Add factor constraints
-            if factor_loadings is not None:
-                for factor in factor_loadings.columns:
-                    factor_exposure = factor_loadings[factor] @ w
-                    constraints.extend([
-                        factor_exposure >= self.constraints.min_factor_exposure,
-                        factor_exposure <= self.constraints.max_factor_exposure
-                    ])
-            
-            # Add sector constraints
-            if sector_exposures is not None:
-                for sector in sector_exposures.index:
-                    sector_exposure = sector_exposures[sector] @ w
-                    constraints.append(
-                        sector_exposure <= self.constraints.max_sector_exposure
-                    )
-            
-            # Solve optimization
-            problem = cp.Problem(objective, constraints)
-            problem.solve()
-            
-            if problem.status != 'optimal':
-                raise ValueError(f"Optimization failed: {problem.status}")
-            
-            # Get optimal weights
-            weights = pd.Series(w.value, index=returns.columns)
-            
-            # Store weights
-            self.weights_history['mean_variance'] = weights
-            
-            return weights
-            
-        except Exception as e:
-            logger.error(f"Error in mean-variance optimization: {str(e)}")
-            raise
+        cov_matrix = returns.cov() * 252
+        risk_aversion = 3.0  # Typical value
+        
+        # Market equilibrium returns
+        pi = risk_aversion * np.dot(cov_matrix, market_caps)
+        
+        # Default views (can be overridden)
+        if views is None:
+            views = {}
+        
+        if view_confidences is None:
+            view_confidences = {}
+        
+        # Create view matrix
+        P = np.zeros((len(views), len(returns.columns)))
+        Q = np.zeros(len(views))
+        Omega = np.zeros((len(views), len(views)))
+        
+        for i, (asset, view) in enumerate(views.items()):
+            if asset in returns.columns:
+                asset_idx = returns.columns.get_loc(asset)
+                P[i, asset_idx] = 1
+                Q[i] = view
+                Omega[i, i] = view_confidences.get(asset, 0.1)
+        
+        # Black-Litterman formula
+        tau = 0.05  # Scaling factor
+        
+        # Posterior covariance
+        M = np.linalg.inv(np.linalg.inv(tau * cov_matrix) + np.dot(P.T, np.dot(np.linalg.inv(Omega), P)))
+        
+        # Posterior returns
+        mu = np.dot(M, np.dot(np.linalg.inv(tau * cov_matrix), pi) + 
+                   np.dot(P.T, np.dot(np.linalg.inv(Omega), Q)))
+        
+        # Optimize with posterior estimates
+        expected_returns = pd.Series(mu, index=returns.columns)
+        
+        return self._mean_variance_optimization(returns, "moderate")
     
-    def risk_parity_optimize(
-        self,
-        returns: pd.DataFrame,
-        target_risk: Optional[float] = None,
-        factor_loadings: Optional[pd.DataFrame] = None,
-        factor_returns: Optional[pd.DataFrame] = None,
-        sector_exposures: Optional[pd.Series] = None
-    ) -> pd.Series:
-        """
-        Risk parity optimization with constraints.
+    def _risk_parity_optimization(self, returns: pd.DataFrame) -> Dict:
+        """Risk parity optimization."""
         
-        Args:
-            returns: Asset returns
-            target_risk: Target portfolio risk
-            factor_loadings: Factor loadings
-            factor_returns: Factor returns
-            sector_exposures: Sector exposures
+        cov_matrix = returns.cov() * 252
+        n_assets = len(returns.columns)
         
-        Returns:
-            Optimal portfolio weights
-        """
-        try:
-            # Calculate covariance
-            sigma = returns.cov() * 252
+        # Objective function: minimize risk contribution differences
+        def objective(weights):
+            portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+            risk_contributions = weights * np.dot(cov_matrix, weights) / portfolio_vol
+            target_contribution = portfolio_vol / n_assets
+            return np.sum((risk_contributions - target_contribution) ** 2)
+        
+        # Constraints
+        constraints = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}  # Weights sum to 1
+        ]
+        
+        # Bounds
+        bounds = [(self.config.min_position_size, self.config.max_position_size) for _ in range(n_assets)]
+        
+        # Initial guess
+        initial_weights = np.array([1/n_assets] * n_assets)
+        
+        # Optimize
+        result = minimize(objective, initial_weights, method='SLSQP', 
+                        bounds=bounds, constraints=constraints)
+        
+        if result.success:
+            optimal_weights = result.x
+            portfolio_vol = np.sqrt(np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights)))
+            expected_returns = returns.mean() * 252
+            portfolio_return = np.sum(expected_returns * optimal_weights)
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
             
-            # Define variables
-            w = cp.Variable(len(returns.columns))
-            
-            # Define objective
-            if target_risk is not None:
-                # Minimize deviation from equal risk contribution
-                risk_contrib = cp.multiply(w, sigma @ w)
-                objective = cp.Minimize(
-                    cp.sum_squares(risk_contrib - cp.sum(risk_contrib) / len(w))
-                )
-                constraints = [
-                    cp.sqrt(cp.quad_form(w, sigma)) == target_risk
-                ]
-            else:
-                # Maximize diversification ratio
-                vol = cp.sqrt(cp.diag(sigma))
-                objective = cp.Maximize(
-                    (vol @ w) / cp.sqrt(cp.quad_form(w, sigma))
-                )
-                constraints = []
-            
-            # Add constraints
-            constraints.extend([
-                cp.sum(w) == 1,  # Full investment
-                w >= self.constraints.min_weight,  # Minimum weight
-                w <= self.constraints.max_weight,  # Maximum weight
-                cp.sum(cp.abs(w)) <= self.constraints.max_leverage  # Leverage limit
-            ])
-            
-            # Add factor constraints
-            if factor_loadings is not None:
-                for factor in factor_loadings.columns:
-                    factor_exposure = factor_loadings[factor] @ w
-                    constraints.extend([
-                        factor_exposure >= self.constraints.min_factor_exposure,
-                        factor_exposure <= self.constraints.max_factor_exposure
-                    ])
-            
-            # Add sector constraints
-            if sector_exposures is not None:
-                for sector in sector_exposures.index:
-                    sector_exposure = sector_exposures[sector] @ w
-                    constraints.append(
-                        sector_exposure <= self.constraints.max_sector_exposure
-                    )
-            
-            # Solve optimization
-            problem = cp.Problem(objective, constraints)
-            problem.solve()
-            
-            if problem.status != 'optimal':
-                raise ValueError(f"Optimization failed: {problem.status}")
-            
-            # Get optimal weights
-            weights = pd.Series(w.value, index=returns.columns)
-            
-            # Store weights
-            self.weights_history['risk_parity'] = weights
-            
-            return weights
-            
-        except Exception as e:
-            logger.error(f"Error in risk parity optimization: {str(e)}")
-            raise
+            return {
+                'weights': pd.Series(optimal_weights, index=returns.columns),
+                'expected_return': portfolio_return,
+                'volatility': portfolio_vol,
+                'sharpe_ratio': sharpe_ratio,
+                'method': 'risk_parity'
+            }
+        else:
+            raise ValueError("Risk parity optimization failed")
     
-    def cvar_optimize(
-        self,
-        returns: pd.DataFrame,
-        target_return: Optional[float] = None,
-        factor_loadings: Optional[pd.DataFrame] = None,
-        factor_returns: Optional[pd.DataFrame] = None,
-        sector_exposures: Optional[pd.Series] = None
-    ) -> pd.Series:
-        """
-        CVaR optimization with constraints.
+    def _maximum_sharpe_optimization(self, returns: pd.DataFrame) -> Dict:
+        """Maximum Sharpe ratio optimization."""
         
-        Args:
-            returns: Asset returns
-            target_return: Target portfolio return
-            factor_loadings: Factor loadings
-            factor_returns: Factor returns
-            sector_exposures: Sector exposures
+        expected_returns = returns.mean() * 252
+        cov_matrix = returns.cov() * 252
+        n_assets = len(returns.columns)
         
-        Returns:
-            Optimal portfolio weights
-        """
-        try:
-            # Generate scenarios
-            np.random.seed(self.random_state)
-            scenarios = np.random.multivariate_normal(
-                returns.mean(),
-                returns.cov(),
-                self.n_simulations
-            )
-            
-            # Define variables
-            w = cp.Variable(len(returns.columns))
-            alpha = cp.Variable()  # VaR
-            beta = cp.Variable(self.n_simulations)  # CVaR auxiliary variables
-            
-            # Define objective
-            if target_return is not None:
-                # Minimize CVaR subject to return constraint
-                objective = cp.Minimize(
-                    alpha + 1 / (0.05 * self.n_simulations) * cp.sum(beta)
-                )
-                constraints = [
-                    returns.mean() @ w * 252 >= target_return
-                ]
-            else:
-                # Maximize return/CVaR ratio
-                objective = cp.Maximize(
-                    (returns.mean() @ w * 252) /
-                    (alpha + 1 / (0.05 * self.n_simulations) * cp.sum(beta))
-                )
-                constraints = []
-            
-            # Add CVaR constraints
-            for i in range(self.n_simulations):
-                constraints.append(
-                    beta[i] >= -scenarios[i] @ w - alpha
-                )
-            
-            # Add constraints
-            constraints.extend([
-                cp.sum(w) == 1,  # Full investment
-                w >= self.constraints.min_weight,  # Minimum weight
-                w <= self.constraints.max_weight,  # Maximum weight
-                cp.sum(cp.abs(w)) <= self.constraints.max_leverage  # Leverage limit
-            ])
-            
-            # Add factor constraints
-            if factor_loadings is not None:
-                for factor in factor_loadings.columns:
-                    factor_exposure = factor_loadings[factor] @ w
-                    constraints.extend([
-                        factor_exposure >= self.constraints.min_factor_exposure,
-                        factor_exposure <= self.constraints.max_factor_exposure
-                    ])
-            
-            # Add sector constraints
-            if sector_exposures is not None:
-                for sector in sector_exposures.index:
-                    sector_exposure = sector_exposures[sector] @ w
-                    constraints.append(
-                        sector_exposure <= self.constraints.max_sector_exposure
-                    )
-            
-            # Solve optimization
-            problem = cp.Problem(objective, constraints)
-            problem.solve()
-            
-            if problem.status != 'optimal':
-                raise ValueError(f"Optimization failed: {problem.status}")
-            
-            # Get optimal weights
-            weights = pd.Series(w.value, index=returns.columns)
-            
-            # Store weights
-            self.weights_history['cvar'] = weights
-            
-            return weights
-            
-        except Exception as e:
-            logger.error(f"Error in CVaR optimization: {str(e)}")
-            raise
-    
-    def black_litterman_optimize(
-        self,
-        returns: pd.DataFrame,
-        market_caps: pd.Series,
-        views: Optional[Dict[str, float]] = None,
-        view_confidences: Optional[Dict[str, float]] = None,
-        factor_loadings: Optional[pd.DataFrame] = None,
-        factor_returns: Optional[pd.DataFrame] = None,
-        sector_exposures: Optional[pd.Series] = None
-    ) -> pd.Series:
-        """
-        Black-Litterman optimization with constraints.
-        
-        Args:
-            returns: Asset returns
-            market_caps: Market capitalizations
-            views: Dictionary of return views
-            view_confidences: Dictionary of view confidences
-            factor_loadings: Factor loadings
-            factor_returns: Factor returns
-            sector_exposures: Sector exposures
-        
-        Returns:
-            Optimal portfolio weights
-        """
-        try:
-            # Calculate market equilibrium
-            market_weights = market_caps / market_caps.sum()
-            sigma = returns.cov() * 252
-            pi = returns.mean() * 252  # Equilibrium returns
-            
-            # Define variables
-            w = cp.Variable(len(returns.columns))
-            
-            # Define objective
-            if views is not None:
-                # Incorporate views
-                omega = np.diag([1 / view_confidences.get(k, 1) for k in views.keys()])
-                P = np.zeros((len(views), len(returns.columns)))
-                q = np.array(list(views.values()))
-                
-                for i, asset in enumerate(views.keys()):
-                    P[i, returns.columns.get_loc(asset)] = 1
-                
-                # Black-Litterman expected returns
-                tau = 0.05  # Prior uncertainty
-                bl_returns = np.linalg.inv(
-                    np.linalg.inv(tau * sigma) + P.T @ np.linalg.inv(omega) @ P
-                ) @ (
-                    np.linalg.inv(tau * sigma) @ pi + P.T @ np.linalg.inv(omega) @ q
-                )
-                
-                # Maximize utility
-                objective = cp.Maximize(
-                    bl_returns @ w - 0.5 * cp.quad_form(w, sigma)
-                )
-            else:
-                # Maximize utility with equilibrium returns
-                objective = cp.Maximize(
-                    pi @ w - 0.5 * cp.quad_form(w, sigma)
-                )
-            
-            # Add constraints
-            constraints = [
-                cp.sum(w) == 1,  # Full investment
-                w >= self.constraints.min_weight,  # Minimum weight
-                w <= self.constraints.max_weight,  # Maximum weight
-                cp.sum(cp.abs(w)) <= self.constraints.max_leverage  # Leverage limit
-            ]
-            
-            # Add factor constraints
-            if factor_loadings is not None:
-                for factor in factor_loadings.columns:
-                    factor_exposure = factor_loadings[factor] @ w
-                    constraints.extend([
-                        factor_exposure >= self.constraints.min_factor_exposure,
-                        factor_exposure <= self.constraints.max_factor_exposure
-                    ])
-            
-            # Add sector constraints
-            if sector_exposures is not None:
-                for sector in sector_exposures.index:
-                    sector_exposure = sector_exposures[sector] @ w
-                    constraints.append(
-                        sector_exposure <= self.constraints.max_sector_exposure
-                    )
-            
-            # Solve optimization
-            problem = cp.Problem(objective, constraints)
-            problem.solve()
-            
-            if problem.status != 'optimal':
-                raise ValueError(f"Optimization failed: {problem.status}")
-            
-            # Get optimal weights
-            weights = pd.Series(w.value, index=returns.columns)
-            
-            # Store weights
-            self.weights_history['black_litterman'] = weights
-            
-            return weights
-            
-        except Exception as e:
-            logger.error(f"Error in Black-Litterman optimization: {str(e)}")
-            raise
-    
-    def _calculate_turnover(self, weights: pd.Series) -> float:
-        """
-        Calculate portfolio turnover.
-        
-        Args:
-            weights: Portfolio weights
-        
-        Returns:
-            Turnover ratio
-        """
-        try:
-            if not self.weights_history:
+        # Objective function: minimize negative Sharpe ratio
+        def objective(weights):
+            portfolio_return = np.sum(expected_returns * weights)
+            portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+            if portfolio_vol == 0:
                 return 0
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
+            return -sharpe_ratio
+        
+        # Constraints
+        constraints = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}  # Weights sum to 1
+        ]
+        
+        # Bounds
+        bounds = [(self.config.min_position_size, self.config.max_position_size) for _ in range(n_assets)]
+        
+        # Initial guess
+        initial_weights = np.array([1/n_assets] * n_assets)
+        
+        # Optimize
+        result = minimize(objective, initial_weights, method='SLSQP', 
+                        bounds=bounds, constraints=constraints)
+        
+        if result.success:
+            optimal_weights = result.x
+            portfolio_return = np.sum(expected_returns * optimal_weights)
+            portfolio_vol = np.sqrt(np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights)))
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
             
-            # Calculate turnover from last weights
-            last_weights = list(self.weights_history.values())[-1]
-            turnover = np.abs(weights - last_weights).sum() / 2
-            
-            return turnover
-            
-        except Exception as e:
-            logger.error(f"Error calculating turnover: {str(e)}")
-            return 0
+            return {
+                'weights': pd.Series(optimal_weights, index=returns.columns),
+                'expected_return': portfolio_return,
+                'volatility': portfolio_vol,
+                'sharpe_ratio': sharpe_ratio,
+                'method': 'maximum_sharpe'
+            }
+        else:
+            raise ValueError("Maximum Sharpe optimization failed")
     
-    def _calculate_liquidity_score(
-        self,
-        returns: pd.DataFrame,
-        weights: pd.Series
-    ) -> float:
-        """
-        Calculate portfolio liquidity score.
+    def _minimum_variance_optimization(self, returns: pd.DataFrame) -> Dict:
+        """Minimum variance optimization."""
         
-        Args:
-            returns: Asset returns
-            weights: Portfolio weights
+        cov_matrix = returns.cov() * 252
+        n_assets = len(returns.columns)
         
-        Returns:
-            Liquidity score
-        """
-        try:
-            # Calculate average daily volume
-            volumes = returns.abs().mean()
+        # Objective function: minimize portfolio variance
+        def objective(weights):
+            return np.dot(weights.T, np.dot(cov_matrix, weights))
+        
+        # Constraints
+        constraints = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}  # Weights sum to 1
+        ]
+        
+        # Bounds
+        bounds = [(self.config.min_position_size, self.config.max_position_size) for _ in range(n_assets)]
+        
+        # Initial guess
+        initial_weights = np.array([1/n_assets] * n_assets)
+        
+        # Optimize
+        result = minimize(objective, initial_weights, method='SLSQP', 
+                        bounds=bounds, constraints=constraints)
+        
+        if result.success:
+            optimal_weights = result.x
+            portfolio_vol = np.sqrt(np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights)))
+            expected_returns = returns.mean() * 252
+            portfolio_return = np.sum(expected_returns * optimal_weights)
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
             
-            # Calculate portfolio liquidity
-            portfolio_liquidity = (volumes * weights).sum()
-            
-            return portfolio_liquidity
-            
-        except Exception as e:
-            logger.error(f"Error calculating liquidity score: {str(e)}")
-            return 0
+            return {
+                'weights': pd.Series(optimal_weights, index=returns.columns),
+                'expected_return': portfolio_return,
+                'volatility': portfolio_vol,
+                'sharpe_ratio': sharpe_ratio,
+                'method': 'minimum_variance'
+            }
+        else:
+            raise ValueError("Minimum variance optimization failed")
     
-    def _calculate_diversification_ratio(
-        self,
-        returns: pd.DataFrame,
-        weights: pd.Series
-    ) -> float:
-        """
-        Calculate portfolio diversification ratio.
+    def _get_market_caps(self, symbols: List[str]) -> Optional[pd.Series]:
+        """Get market capitalizations for symbols."""
+        # This would typically fetch from a data provider
+        # For now, return None to use equal weights
+        return None
+    
+    def calculate_efficient_frontier(self, returns: pd.DataFrame, 
+                                   num_portfolios: int = 100) -> pd.DataFrame:
+        """Calculate efficient frontier."""
         
-        Args:
-            returns: Asset returns
-            weights: Portfolio weights
+        expected_returns = returns.mean() * 252
+        cov_matrix = returns.cov() * 252
+        n_assets = len(returns.columns)
         
-        Returns:
-            Diversification ratio
-        """
-        try:
-            # Calculate individual volatilities
-            vols = returns.std() * np.sqrt(252)
+        # Generate random portfolios
+        portfolios = []
+        
+        for _ in range(num_portfolios):
+            # Generate random weights
+            weights = np.random.random(n_assets)
+            weights = weights / np.sum(weights)
             
-            # Calculate portfolio volatility
-            sigma = returns.cov() * 252
-            port_vol = np.sqrt(weights @ sigma @ weights)
+            # Calculate portfolio metrics
+            portfolio_return = np.sum(expected_returns * weights)
+            portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+            sharpe_ratio = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
             
-            # Calculate weighted average volatility
-            avg_vol = (vols * weights).sum()
-            
-            # Calculate diversification ratio
-            div_ratio = avg_vol / port_vol
-            
-            return div_ratio
-            
-        except Exception as e:
-            logger.error(f"Error calculating diversification ratio: {str(e)}")
-            return 0
+            portfolios.append({
+                'return': portfolio_return,
+                'volatility': portfolio_vol,
+                'sharpe_ratio': sharpe_ratio,
+                'weights': weights
+            })
+        
+        return pd.DataFrame(portfolios)
+    
+    def calculate_portfolio_metrics(self, returns: pd.DataFrame, 
+                                  weights: pd.Series) -> Dict:
+        """Calculate comprehensive portfolio metrics."""
+        
+        # Basic metrics
+        portfolio_returns = (returns * weights).sum(axis=1)
+        
+        # Annualized metrics
+        annual_return = portfolio_returns.mean() * 252
+        annual_vol = portfolio_returns.std() * np.sqrt(252)
+        sharpe_ratio = (annual_return - self.config.risk_free_rate) / annual_vol if annual_vol > 0 else 0
+        
+        # Drawdown analysis
+        cumulative_returns = (1 + portfolio_returns).cumprod()
+        running_max = cumulative_returns.expanding().max()
+        drawdown = (cumulative_returns - running_max) / running_max
+        max_drawdown = drawdown.min()
+        
+        # VaR and CVaR
+        var_95 = np.percentile(portfolio_returns, 5)
+        cvar_95 = portfolio_returns[portfolio_returns <= var_95].mean()
+        
+        # Beta calculation (assuming market returns available)
+        # For now, use portfolio volatility as proxy
+        beta = annual_vol / 0.15  # Assuming 15% market volatility
+        
+        # Sector and factor exposures (placeholder)
+        sector_exposure = 0.0
+        factor_exposure = 0.0
+        
+        return {
+            'annual_return': annual_return,
+            'annual_volatility': annual_vol,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'var_95': var_95,
+            'cvar_95': cvar_95,
+            'beta': beta,
+            'sector_exposure': sector_exposure,
+            'factor_exposure': factor_exposure,
+            'weights': weights
+        }
+    
+    def rebalance_portfolio(self, current_weights: pd.Series, 
+                           target_weights: pd.Series, 
+                           current_prices: pd.Series) -> Dict:
+        """Calculate rebalancing trades."""
+        
+        # Calculate required trades
+        trades = target_weights - current_weights
+        
+        # Calculate transaction costs
+        transaction_cost = np.sum(np.abs(trades)) * self.config.transaction_costs
+        
+        # Filter out small trades (below minimum threshold)
+        min_trade_threshold = 0.01  # 1%
+        trades_filtered = trades.copy()
+        trades_filtered[np.abs(trades) < min_trade_threshold] = 0
+        
+        # Recalculate transaction costs
+        transaction_cost_filtered = np.sum(np.abs(trades_filtered)) * self.config.transaction_costs
+        
+        return {
+            'trades': trades_filtered,
+            'transaction_cost': transaction_cost_filtered,
+            'trade_count': np.sum(trades_filtered != 0),
+            'total_turnover': np.sum(np.abs(trades_filtered))
+        }
     
     def plot_optimization_results(
         self,
@@ -781,7 +552,7 @@ class PortfolioOptimizer:
         """
         try:
             # Calculate metrics
-            metrics = self.calculate_metrics(returns, weights)
+            metrics = self.calculate_portfolio_metrics(returns, weights)
             
             # Create figure with subplots
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))

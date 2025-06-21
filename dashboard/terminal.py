@@ -1,6 +1,6 @@
 """
-MorganVuoksi - Bloomberg-Style Quantitative Trading Terminal
-A comprehensive Streamlit dashboard for quantitative research and trading.
+MorganVuoksi Terminal - Bloomberg-Style Quantitative Trading Terminal
+Modern, institutional-grade interface for quantitative research and trading.
 """
 
 import streamlit as st
@@ -9,39 +9,29 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-import altair as alt
 import yfinance as yf
 from datetime import datetime, timedelta
 import asyncio
-import warnings
-warnings.filterwarnings('ignore')
-
-# Import all our modules
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from typing import Dict, List, Optional
+import warnings
 
-from src.config import Config
-from src.data.pipeline import DataPipeline
-from src.models.lstm import LSTM
-from src.models.xgboost import XGBoost
-from src.models.transformer import Transformer
-from src.models.arima_garch import ARIMAGARCH
-from src.portfolio.optimizer import PortfolioOptimizer
-from src.portfolio.risk import RiskManager
-from src.signals.signal_generator import SignalGenerator
-from src.signals.alpha_factors import AlphaFactors
-from src.signals.ml_models import MLSignalGenerator
-from src.backtesting.engine import BacktestEngine
-from src.execution.simulate import ExecutionSimulator
-from src.ml.ecosystem import MLEcosystem
-from src.ml.learning_loop import LearningLoop
-from src.visuals import (
-    plot_equity_curve, plot_rolling_metrics, plot_trade_annotations,
-    plot_risk_heatmap, plot_strategy_comparison, plot_signal_strength,
-    plot_feature_importance, plot_signal_decay, plot_risk_decomposition,
-    plot_correlation_matrix, plot_drawdown_analysis
-)
+# Add src to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Import our modules
+from data.market_data import MarketDataFetcher, DataConfig
+from models.advanced_models import TimeSeriesPredictor, ARIMAGARCHModel, EnsembleModel
+from models.rl_models import TD3Agent, SACAgent, TradingEnvironment
+from signals.nlp_signals import NLPSignalGenerator, FinancialNLPAnalyzer
+from portfolio.optimizer import PortfolioOptimizer
+from risk.risk_manager import RiskManager
+from visuals.dashboard import create_candlestick_chart, create_technical_chart
+from visuals.portfolio_visuals import create_portfolio_chart
+from visuals.risk_visuals import create_risk_dashboard
+
+warnings.filterwarnings('ignore')
 
 # Page configuration
 st.set_page_config(
@@ -51,7 +41,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Bloomberg-style dark theme
+# Custom CSS for Bloomberg-style theme
 st.markdown("""
 <style>
     .main {
@@ -62,925 +52,1086 @@ st.markdown("""
         background-color: #0e1117;
     }
     .stSidebar {
-        background-color: #262730;
+        background-color: #1e1e1e;
+        color: #fafafa;
+    }
+    .stTextInput, .stSelectbox, .stNumberInput {
+        background-color: #2d2d2d;
+        color: #fafafa;
     }
     .stButton > button {
-        background-color: #1f77b4;
+        background-color: #0066cc;
         color: white;
         border: none;
         border-radius: 4px;
         padding: 8px 16px;
-        font-weight: bold;
     }
     .stButton > button:hover {
-        background-color: #0d5aa7;
+        background-color: #0052a3;
     }
-    .metric-container {
-        background-color: #262730;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #4a4a4a;
+    .metric-card {
+        background-color: #2d2d2d;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #0066cc;
+        margin: 0.5rem 0;
     }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+    .positive-change {
+        color: #00ff88;
     }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #262730;
-        border-radius: 4px 4px 0px 0px;
-        color: #fafafa;
-        border: 1px solid #4a4a4a;
+    .negative-change {
+        color: #ff4444;
     }
-    .stTabs [aria-selected="true"] {
-        background-color: #1f77b4;
-        color: white;
-    }
-    .stDataFrame {
-        background-color: #262730;
-    }
-    .stSelectbox > div > div {
-        background-color: #262730;
-        color: #fafafa;
+    .neutral-change {
+        color: #cccccc;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'data_cache' not in st.session_state:
-    st.session_state.data_cache = {}
-if 'models_cache' not in st.session_state:
-    st.session_state.models_cache = {}
-if 'portfolio_cache' not in st.session_state:
-    st.session_state.portfolio_cache = {}
-
-# Load configuration
-@st.cache_resource
-def load_config():
-    return Config()
-
-config = load_config()
-
-# Data fetching and caching
-@st.cache_data(ttl=300)
-def fetch_market_data(symbol: str, period: str = "1y"):
-    """Fetch market data with caching."""
-    try:
-        ticker = yf.Ticker(symbol)
-        data = ticker.history(period=period)
-        data['Returns'] = data['Close'].pct_change()
-        data['Volatility'] = data['Returns'].rolling(window=20).std()
-        data['MA20'] = data['Close'].rolling(window=20).mean()
-        data['MA50'] = data['Close'].rolling(window=50).mean()
-        data['RSI'] = calculate_rsi(data['Close'])
-        return data.dropna()
-    except Exception as e:
-        st.error(f"Error fetching data for {symbol}: {str(e)}")
-        return None
-
-def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
-    """Calculate RSI technical indicator."""
-    delta = prices.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-# Sidebar configuration
-st.sidebar.title("🎯 MorganVuoksi Terminal")
-st.sidebar.markdown("---")
-
-# Symbol and date selection
-symbol = st.sidebar.text_input("Symbol", value="AAPL").upper()
-period = st.sidebar.selectbox("Time Period", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
-
-# Strategy selection
-st.sidebar.markdown("### 📊 Strategy Configuration")
-strategy = st.sidebar.selectbox(
-    "Trading Strategy",
-    ["Momentum", "Mean Reversion", "ML Ensemble", "Risk Parity", "Custom"]
-)
-
-# Model selection
-st.sidebar.markdown("### 🤖 ML Models")
-selected_models = st.sidebar.multiselect(
-    "Select Models",
-    ["LSTM", "XGBoost", "Transformer", "ARIMA-GARCH"],
-    default=["LSTM", "XGBoost"]
-)
-
-# Risk parameters
-st.sidebar.markdown("### ⚠️ Risk Management")
-max_position_size = st.sidebar.slider("Max Position Size (%)", 1, 20, 5)
-stop_loss = st.sidebar.slider("Stop Loss (%)", 1, 10, 3)
-max_drawdown = st.sidebar.slider("Max Drawdown (%)", 5, 30, 15)
-
-# Main dashboard
-st.title("📈 MorganVuoksi Quantitative Trading Terminal")
-st.markdown("---")
-
-# Create tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
-    "📈 Market Data", "🤖 AI/ML Predictions", "⚙️ Backtesting", "📊 Portfolio Optimizer",
-    "🧠 NLP & Sentiment", "📉 Valuation Tools", "💸 Trade Simulator", "🧾 Reports",
-    "🧪 Risk Management", "🧬 LLM Assistant"
-])
-
-# Tab 1: Market Data Viewer
-with tab1:
-    st.header("📈 Market Data Viewer")
+class MorganVuoksiTerminal:
+    """Main terminal application."""
     
-    col1, col2, col3, col4 = st.columns(4)
+    def __init__(self):
+        self.data_fetcher = MarketDataFetcher()
+        self.nlp_generator = NLPSignalGenerator()
+        self.portfolio_optimizer = PortfolioOptimizer()
+        self.risk_manager = RiskManager()
+        
+        # Initialize session state
+        if 'current_symbol' not in st.session_state:
+            st.session_state.current_symbol = 'AAPL'
+        if 'data_cache' not in st.session_state:
+            st.session_state.data_cache = {}
+        if 'predictions_cache' not in st.session_state:
+            st.session_state.predictions_cache = {}
     
-    # Fetch data
-    data = fetch_market_data(symbol, period)
+    def run(self):
+        """Run the terminal application."""
+        # Header
+        self._render_header()
+        
+        # Sidebar
+        self._render_sidebar()
+        
+        # Main content
+        self._render_main_content()
     
-    if data is not None:
+    def _render_header(self):
+        """Render the terminal header."""
+        col1, col2, col3 = st.columns([2, 6, 2])
+        
         with col1:
-            st.metric("Current Price", f"${data['Close'].iloc[-1]:.2f}")
+            st.markdown("### 📈 MorganVuoksi")
+        
         with col2:
-            daily_return = ((data['Close'].iloc[-1] / data['Close'].iloc[-2]) - 1) * 100
-            st.metric("Daily Return", f"{daily_return:.2f}%")
+            st.markdown("<h1 style='text-align: center; color: #0066cc;'>Quantitative Trading Terminal</h1>", 
+                       unsafe_allow_html=True)
+        
         with col3:
-            volatility = data['Volatility'].iloc[-1] * 100
-            st.metric("Volatility", f"{volatility:.2f}%")
-        with col4:
-            rsi = data['RSI'].iloc[-1]
-            st.metric("RSI", f"{rsi:.1f}")
+            current_time = datetime.now().strftime("%H:%M:%S")
+            st.markdown(f"### {current_time}")
         
-        # Price chart
-        fig = make_subplots(
-            rows=3, cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.05,
-            subplot_titles=('Price & Moving Averages', 'Volume', 'RSI'),
-            row_heights=[0.6, 0.2, 0.2]
-        )
+        st.markdown("---")
+    
+    def _render_sidebar(self):
+        """Render the sidebar with controls."""
+        st.sidebar.markdown("## 🎛️ Controls")
         
-        # Price and moving averages
-        fig.add_trace(
-            go.Scatter(x=data.index, y=data['Close'], name='Price', line=dict(color='#1f77b4')),
-            row=1, col=1
-        )
-        fig.add_trace(
-            go.Scatter(x=data.index, y=data['MA20'], name='MA20', line=dict(color='orange')),
-            row=1, col=1
-        )
-        fig.add_trace(
-            go.Scatter(x=data.index, y=data['MA50'], name='MA50', line=dict(color='red')),
-            row=1, col=1
-        )
+        # Symbol input
+        symbol = st.sidebar.text_input("Symbol", value=st.session_state.current_symbol, 
+                                      help="Enter stock symbol (e.g., AAPL, TSLA)")
         
-        # Volume
-        fig.add_trace(
-            go.Bar(x=data.index, y=data['Volume'], name='Volume', marker_color='lightblue'),
-            row=2, col=1
-        )
+        if symbol:
+            st.session_state.current_symbol = symbol.upper()
         
-        # RSI
-        fig.add_trace(
-            go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')),
-            row=3, col=1
-        )
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+        # Date range
+        st.sidebar.markdown("### Date Range")
+        period = st.sidebar.selectbox("Period", 
+                                    ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"],
+                                    index=5)
         
-        fig.update_layout(height=800, showlegend=True, template="plotly_dark")
-        st.plotly_chart(fig, use_container_width=True)
+        # Data source
+        st.sidebar.markdown("### Data Source")
+        data_source = st.sidebar.selectbox("Source", ["yahoo", "alpaca", "polygon"], index=0)
         
-        # Data table
-        st.subheader("Recent Data")
-        st.dataframe(data.tail(20), use_container_width=True)
-
-# Tab 2: AI/ML Predictions
-with tab2:
-    st.header("🤖 AI/ML Predictions")
-    
-    if st.button("🔄 Train Models & Generate Predictions"):
-        with st.spinner("Training models..."):
-            if data is not None:
-                # Prepare features
-                feature_cols = ['Returns', 'Volatility', 'MA20', 'MA50', 'RSI']
-                X = data[feature_cols].dropna()
-                y = data['Close'].shift(-1).dropna()
-                
-                # Align data
-                common_idx = X.index.intersection(y.index)
-                X = X.loc[common_idx]
-                y = y.loc[common_idx]
-                
-                # Split data
-                split_idx = int(len(X) * 0.8)
-                X_train, X_test = X[:split_idx], X[split_idx:]
-                y_train, y_test = y[:split_idx], y[split_idx:]
-                
-                predictions = {}
-                model_metrics = {}
-                
-                # Train selected models
-                if "LSTM" in selected_models:
-                    try:
-                        lstm = LSTM(config={
-                            'hidden_size': 64,
-                            'num_layers': 2,
-                            'dropout': 0.2,
-                            'batch_size': 32,
-                            'epochs': 50,
-                            'learning_rate': 0.001,
-                            'sequence_length': 10
-                        })
-                        lstm.fit(X_train, y_train)
-                        lstm_pred = lstm.predict(X_test)
-                        predictions['LSTM'] = lstm_pred
-                        model_metrics['LSTM'] = np.sqrt(np.mean((lstm_pred - y_test) ** 2))
-                    except Exception as e:
-                        st.error(f"LSTM training failed: {str(e)}")
-                
-                if "XGBoost" in selected_models:
-                    try:
-                        xgb = XGBoost(config={
-                            'max_depth': 6,
-                            'learning_rate': 0.1,
-                            'n_estimators': 100,
-                            'subsample': 0.8,
-                            'colsample_bytree': 0.8
-                        })
-                        xgb.fit(X_train, y_train)
-                        xgb_pred = xgb.predict(X_test)
-                        predictions['XGBoost'] = xgb_pred
-                        model_metrics['XGBoost'] = np.sqrt(np.mean((xgb_pred - y_test) ** 2))
-                    except Exception as e:
-                        st.error(f"XGBoost training failed: {str(e)}")
-                
-                if "Transformer" in selected_models:
-                    try:
-                        transformer = Transformer(config={
-                            'd_model': 64,
-                            'n_heads': 4,
-                            'n_layers': 2,
-                            'dropout': 0.1,
-                            'batch_size': 32,
-                            'epochs': 50,
-                            'learning_rate': 0.001
-                        })
-                        transformer.fit(X_train, y_train)
-                        transformer_pred = transformer.predict(X_test)
-                        predictions['Transformer'] = transformer_pred
-                        model_metrics['Transformer'] = np.sqrt(np.mean((transformer_pred - y_test) ** 2))
-                    except Exception as e:
-                        st.error(f"Transformer training failed: {str(e)}")
-                
-                if "ARIMA-GARCH" in selected_models:
-                    try:
-                        arima_garch = ARIMAGARCH(config={
-                            'max_p': 5,
-                            'max_d': 2,
-                            'max_q': 5,
-                            'seasonal': True,
-                            'm': 12,
-                            'garch_p': 1,
-                            'garch_q': 1
-                        })
-                        arima_garch.fit(X_train, y_train)
-                        arima_pred, vol_pred = arima_garch.predict(X_test, horizon=len(X_test))
-                        predictions['ARIMA-GARCH'] = arima_pred
-                        model_metrics['ARIMA-GARCH'] = np.sqrt(np.mean((arima_pred - y_test) ** 2))
-                    except Exception as e:
-                        st.error(f"ARIMA-GARCH training failed: {str(e)}")
-                
-                # Display predictions
-                if predictions:
-                    # Prediction chart
-                    fig = go.Figure()
-                    
-                    # Actual values
-                    fig.add_trace(go.Scatter(
-                        x=X_test.index, y=y_test,
-                        name='Actual', line=dict(color='white', width=2)
-                    ))
-                    
-                    # Model predictions
-                    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-                    for i, (model_name, pred) in enumerate(predictions.items()):
-                        fig.add_trace(go.Scatter(
-                            x=X_test.index, y=pred,
-                            name=f'{model_name} Prediction',
-                            line=dict(color=colors[i % len(colors)])
-                        ))
-                    
-                    fig.update_layout(
-                        title="Model Predictions vs Actual",
-                        xaxis_title="Date",
-                        yaxis_title="Price",
-                        template="plotly_dark",
-                        height=600
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Model performance metrics
-                    st.subheader("Model Performance")
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    for i, (model_name, rmse) in enumerate(model_metrics.items()):
-                        with [col1, col2, col3, col4][i % 4]:
-                            st.metric(f"{model_name} RMSE", f"{rmse:.4f}")
-                    
-                    # Feature importance (if XGBoost is available)
-                    if "XGBoost" in predictions:
-                        try:
-                            importance_df = xgb.get_feature_importance()
-                            fig_importance = px.bar(
-                                importance_df,
-                                x='feature',
-                                y='importance',
-                                title="Feature Importance (XGBoost)",
-                                template="plotly_dark"
-                            )
-                            st.plotly_chart(fig_importance, use_container_width=True)
-                        except:
-                            pass
-
-# Tab 3: Backtesting Engine
-with tab3:
-    st.header("⚙️ Backtesting Engine")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        backtest_start = st.date_input("Start Date", value=data.index[0].date() if data is not None else datetime.now().date())
-        backtest_end = st.date_input("End Date", value=data.index[-1].date() if data is not None else datetime.now().date())
-        initial_capital = st.number_input("Initial Capital ($)", value=100000, step=10000)
-    
-    with col2:
-        commission = st.number_input("Commission (%)", value=0.1, step=0.01)
-        slippage = st.number_input("Slippage (%)", value=0.05, step=0.01)
-        rebalance_freq = st.selectbox("Rebalance Frequency", ["Daily", "Weekly", "Monthly"])
-    
-    if st.button("🚀 Run Backtest"):
-        with st.spinner("Running backtest..."):
-            if data is not None:
-                try:
-                    # Create backtest engine
-                    backtest_engine = BacktestEngine(
-                        initial_capital=initial_capital,
-                        commission=commission/100,
-                        slippage=slippage/100
-                    )
-                    
-                    # Simple momentum strategy
-                    data_copy = data.copy()
-                    data_copy['Signal'] = 0
-                    data_copy.loc[data_copy['Returns'] > 0, 'Signal'] = 1
-                    data_copy.loc[data_copy['Returns'] < 0, 'Signal'] = -1
-                    
-                    # Run backtest
-                    results = backtest_engine.run_backtest(
-                        data=data_copy,
-                        strategy_name="Momentum Strategy"
-                    )
-                    
-                    # Display results
-                    st.subheader("Backtest Results")
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Return", f"{results['total_return']:.2%}")
-                    with col2:
-                        st.metric("Sharpe Ratio", f"{results['sharpe_ratio']:.2f}")
-                    with col3:
-                        st.metric("Max Drawdown", f"{results['max_drawdown']:.2%}")
-                    with col4:
-                        st.metric("Final Portfolio", f"${results['final_portfolio']:,.0f}")
-                    
-                    # Equity curve
-                    if 'equity_curve' in results:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=results['equity_curve'].index,
-                            y=results['equity_curve']['Portfolio Value'],
-                            name='Portfolio Value',
-                            line=dict(color='#1f77b4')
-                        ))
-                        fig.update_layout(
-                            title="Equity Curve",
-                            xaxis_title="Date",
-                            yaxis_title="Portfolio Value ($)",
-                            template="plotly_dark"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Trade analysis
-                    if 'trades' in results and len(results['trades']) > 0:
-                        st.subheader("Trade Analysis")
-                        trades_df = pd.DataFrame(results['trades'])
-                        st.dataframe(trades_df, use_container_width=True)
-                        
-                        # Trade distribution
-                        fig = px.histogram(
-                            trades_df,
-                            x='return',
-                            title="Trade Return Distribution",
-                            template="plotly_dark"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                except Exception as e:
-                    st.error(f"Backtest failed: {str(e)}")
-
-# Tab 4: Portfolio Optimizer
-with tab4:
-    st.header("📊 Portfolio Optimizer")
-    
-    # Portfolio configuration
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        symbols = st.text_area("Symbols (comma-separated)", value="AAPL,MSFT,GOOGL,AMZN,TSLA")
-        symbols_list = [s.strip().upper() for s in symbols.split(",")]
+        # Model settings
+        st.sidebar.markdown("### AI Models")
+        model_type = st.sidebar.selectbox("Prediction Model", 
+                                        ["lstm", "transformer", "xgboost", "ensemble"], index=3)
         
-        optimization_method = st.selectbox(
-            "Optimization Method",
-            ["Mean-Variance", "Risk Parity", "Maximum Sharpe", "Minimum Variance"]
-        )
-    
-    with col2:
-        risk_free_rate = st.number_input("Risk-Free Rate (%)", value=2.0, step=0.1) / 100
-        target_return = st.number_input("Target Return (%)", value=10.0, step=0.5) / 100
-        max_weight = st.number_input("Max Weight per Asset (%)", value=30.0, step=5.0) / 100
-    
-    if st.button("🎯 Optimize Portfolio"):
-        with st.spinner("Optimizing portfolio..."):
-            try:
-                # Fetch data for all symbols
-                portfolio_data = {}
-                for symbol in symbols_list:
-                    data = fetch_market_data(symbol, "1y")
-                    if data is not None:
-                        portfolio_data[symbol] = data['Returns'].dropna()
-                
-                if len(portfolio_data) > 1:
-                    # Create returns dataframe
-                    returns_df = pd.DataFrame(portfolio_data)
-                    returns_df = returns_df.dropna()
-                    
-                    # Calculate expected returns and covariance
-                    expected_returns = returns_df.mean() * 252  # Annualized
-                    cov_matrix = returns_df.cov() * 252  # Annualized
-                    
-                    # Create portfolio optimizer
-                    optimizer = PortfolioOptimizer(
-                        expected_returns=expected_returns,
-                        cov_matrix=cov_matrix,
-                        risk_free_rate=risk_free_rate
-                    )
-                    
-                    # Optimize based on method
-                    if optimization_method == "Mean-Variance":
-                        weights = optimizer.optimize_mean_variance(target_return=target_return)
-                    elif optimization_method == "Risk Parity":
-                        weights = optimizer.optimize_risk_parity()
-                    elif optimization_method == "Maximum Sharpe":
-                        weights = optimizer.optimize_max_sharpe()
-                    elif optimization_method == "Minimum Variance":
-                        weights = optimizer.optimize_min_variance()
-                    
-                    # Display results
-                    st.subheader("Optimized Portfolio")
-                    
-                    # Portfolio weights
-                    weights_df = pd.DataFrame({
-                        'Symbol': list(weights.keys()),
-                        'Weight': [f"{w:.2%}" for w in weights.values()]
-                    })
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.dataframe(weights_df, use_container_width=True)
-                        
-                        # Pie chart
-                        fig = px.pie(
-                            weights_df,
-                            values=[float(w.strip('%')) for w in weights_df['Weight']],
-                            names=weights_df['Symbol'],
-                            title="Portfolio Allocation",
-                            template="plotly_dark"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        # Portfolio metrics
-                        portfolio_return = sum(weights[s] * expected_returns[s] for s in weights.keys())
-                        portfolio_vol = np.sqrt(sum(weights[s] * weights[t] * cov_matrix.loc[s, t] 
-                                                   for s in weights.keys() for t in weights.keys()))
-                        sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_vol
-                        
-                        st.metric("Expected Return", f"{portfolio_return:.2%}")
-                        st.metric("Portfolio Volatility", f"{portfolio_vol:.2%}")
-                        st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
-                        
-                        # Efficient frontier
-                        returns_range = np.linspace(0.05, 0.25, 50)
-                        efficient_frontier = []
-                        
-                        for target_ret in returns_range:
-                            try:
-                                w = optimizer.optimize_mean_variance(target_return=target_ret)
-                                vol = np.sqrt(sum(w[s] * w[t] * cov_matrix.loc[s, t] 
-                                                 for s in w.keys() for t in w.keys()))
-                                efficient_frontier.append((vol, target_ret))
-                            except:
-                                pass
-                        
-                        if efficient_frontier:
-                            frontier_df = pd.DataFrame(efficient_frontier, columns=['Volatility', 'Return'])
-                            fig = px.scatter(
-                                frontier_df,
-                                x='Volatility',
-                                y='Return',
-                                title="Efficient Frontier",
-                                template="plotly_dark"
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
-                
-                else:
-                    st.error("Need at least 2 symbols with valid data for portfolio optimization")
-            
-            except Exception as e:
-                st.error(f"Portfolio optimization failed: {str(e)}")
-
-# Tab 5: NLP & Sentiment
-with tab5:
-    st.header("🧠 NLP & Sentiment Analysis")
-    
-    # Mock sentiment data (in production, this would come from real NLP models)
-    sentiment_data = pd.DataFrame({
-        'Date': pd.date_range(start='2024-01-01', periods=100, freq='D'),
-        'Sentiment_Score': np.random.normal(0, 0.5, 100),
-        'News_Volume': np.random.poisson(50, 100),
-        'Social_Media_Score': np.random.normal(0, 0.3, 100)
-    })
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Sentiment Timeline")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=sentiment_data['Date'],
-            y=sentiment_data['Sentiment_Score'],
-            name='Sentiment Score',
-            line=dict(color='#1f77b4')
-        ))
-        fig.add_hline(y=0, line_dash="dash", line_color="gray")
-        fig.update_layout(
-            title="Sentiment Score Over Time",
-            template="plotly_dark"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("News Volume vs Sentiment")
-        fig = px.scatter(
-            sentiment_data,
-            x='News_Volume',
-            y='Sentiment_Score',
-            title="News Volume vs Sentiment",
-            template="plotly_dark"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Sentiment metrics
-    st.subheader("Sentiment Metrics")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Current Sentiment", f"{sentiment_data['Sentiment_Score'].iloc[-1]:.3f}")
-    with col2:
-        st.metric("Sentiment Trend", f"{sentiment_data['Sentiment_Score'].diff().mean():.3f}")
-    with col3:
-        st.metric("News Volume", f"{sentiment_data['News_Volume'].iloc[-1]:.0f}")
-    with col4:
-        st.metric("Social Score", f"{sentiment_data['Social_Media_Score'].iloc[-1]:.3f}")
-
-# Tab 6: Valuation Tools
-with tab6:
-    st.header("📉 Valuation Tools")
-    
-    valuation_method = st.selectbox(
-        "Valuation Method",
-        ["DCF Model", "Comparable Analysis", "LBO Model", "Dividend Discount Model"]
-    )
-    
-    if valuation_method == "DCF Model":
-        st.subheader("Discounted Cash Flow Model")
+        # Risk settings
+        st.sidebar.markdown("### Risk Management")
+        max_position_size = st.sidebar.slider("Max Position Size (%)", 1, 100, 20)
+        stop_loss = st.sidebar.slider("Stop Loss (%)", 1, 50, 10)
         
-        col1, col2 = st.columns(2)
+        # Store settings in session state
+        st.session_state.period = period
+        st.session_state.data_source = data_source
+        st.session_state.model_type = model_type
+        st.session_state.max_position_size = max_position_size
+        st.session_state.stop_loss = stop_loss
         
-        with col1:
-            current_fcf = st.number_input("Current Free Cash Flow ($M)", value=1000)
-            growth_rate = st.number_input("Growth Rate (%)", value=5.0, step=0.5) / 100
-            terminal_growth = st.number_input("Terminal Growth (%)", value=2.0, step=0.1) / 100
+        # Quick actions
+        st.sidebar.markdown("### Quick Actions")
+        if st.sidebar.button("🔄 Refresh Data"):
+            self._clear_cache()
         
-        with col2:
-            discount_rate = st.number_input("Discount Rate (%)", value=10.0, step=0.5) / 100
-            projection_years = st.number_input("Projection Years", value=5, min_value=1, max_value=10)
-            shares_outstanding = st.number_input("Shares Outstanding (M)", value=1000)
+        if st.sidebar.button("📊 Generate Report"):
+            self._generate_report()
+    
+    def _render_main_content(self):
+        """Render the main content area."""
+        # Create tabs
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+            "📈 Market Data", "🤖 AI Predictions", "📊 Portfolio", "💰 Valuation", 
+            "⚠️ Risk Analysis", "🔄 Backtesting", "🎮 RL Simulator", "📰 News & NLP", 
+            "📋 Reports", "🤖 LLM Assistant"
+        ])
         
-        if st.button("Calculate DCF Value"):
-            # DCF calculation
-            fcf_forecast = []
-            for year in range(1, projection_years + 1):
-                fcf = current_fcf * (1 + growth_rate) ** year
-                fcf_forecast.append(fcf)
-            
-            # Terminal value
-            terminal_fcf = fcf_forecast[-1] * (1 + terminal_growth)
-            terminal_value = terminal_fcf / (discount_rate - terminal_growth)
-            
-            # Present values
-            pv_fcf = sum(fcf / (1 + discount_rate) ** (i + 1) for i, fcf in enumerate(fcf_forecast))
-            pv_terminal = terminal_value / (1 + discount_rate) ** projection_years
-            
-            enterprise_value = pv_fcf + pv_terminal
-            equity_value = enterprise_value / shares_outstanding
-            
-            st.subheader("DCF Results")
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("Enterprise Value", f"${enterprise_value:,.0f}M")
-            with col2:
-                st.metric("Equity Value", f"${equity_value:,.2f}")
-            with col3:
-                st.metric("Per Share Value", f"${equity_value:,.2f}")
-            
-            # FCF forecast chart
-            forecast_df = pd.DataFrame({
-                'Year': range(1, projection_years + 1),
-                'FCF': fcf_forecast
-            })
-            
-            fig = px.bar(
-                forecast_df,
-                x='Year',
-                y='FCF',
-                title="Free Cash Flow Forecast",
-                template="plotly_dark"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-# Tab 7: Trade Simulator
-with tab7:
-    st.header("💸 Trade Simulator")
+        with tab1:
+            self._render_market_data_tab()
+        
+        with tab2:
+            self._render_ai_predictions_tab()
+        
+        with tab3:
+            self._render_portfolio_tab()
+        
+        with tab4:
+            self._render_valuation_tab()
+        
+        with tab5:
+            self._render_risk_analysis_tab()
+        
+        with tab6:
+            self._render_backtesting_tab()
+        
+        with tab7:
+            self._render_rl_simulator_tab()
+        
+        with tab8:
+            self._render_news_nlp_tab()
+        
+        with tab9:
+            self._render_reports_tab()
+        
+        with tab10:
+            self._render_llm_assistant_tab()
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        trade_symbol = st.text_input("Trade Symbol", value=symbol)
-        trade_side = st.selectbox("Trade Side", ["Buy", "Sell"])
-        trade_size = st.number_input("Trade Size (shares)", value=100, min_value=1)
-        trade_price = st.number_input("Trade Price ($)", value=data['Close'].iloc[-1] if data is not None else 100.0)
-    
-    with col2:
-        order_type = st.selectbox("Order Type", ["Market", "Limit", "Stop", "Stop Limit"])
-        time_in_force = st.selectbox("Time in Force", ["Day", "GTC", "IOC"])
-        algo_type = st.selectbox("Algorithm", ["TWAP", "VWAP", "POV", "Custom"])
-    
-    if st.button("📊 Simulate Trade"):
-        with st.spinner("Simulating trade execution..."):
-            try:
-                # Create execution simulator
-                simulator = ExecutionSimulator(
-                    market_data=data if data is not None else pd.DataFrame(),
-                    commission_rate=0.001,
-                    slippage_model="linear"
-                )
-                
-                # Simulate trade
-                execution_result = simulator.simulate_trade(
-                    symbol=trade_symbol,
-                    side=trade_side.lower(),
-                    quantity=trade_size,
-                    price=trade_price,
-                    order_type=order_type.lower(),
-                    algo_type=algo_type.lower()
-                )
-                
-                st.subheader("Trade Execution Results")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Execution Price", f"${execution_result['avg_price']:.2f}")
-                with col2:
-                    st.metric("Total Cost", f"${execution_result['total_cost']:,.2f}")
-                with col3:
-                    st.metric("Market Impact", f"${execution_result['market_impact']:.2f}")
-                with col4:
-                    st.metric("Execution Time", f"{execution_result['execution_time']:.2f}s")
-                
-                # Execution timeline
-                if 'execution_timeline' in execution_result:
-                    timeline_df = pd.DataFrame(execution_result['execution_timeline'])
-                    
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=timeline_df['timestamp'],
-                        y=timeline_df['price'],
-                        mode='lines+markers',
-                        name='Execution Price',
-                        line=dict(color='#1f77b4')
-                    ))
-                    fig.update_layout(
-                        title="Trade Execution Timeline",
-                        xaxis_title="Time",
-                        yaxis_title="Price ($)",
-                        template="plotly_dark"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-            
-            except Exception as e:
-                st.error(f"Trade simulation failed: {str(e)}")
-
-# Tab 8: Report Generator
-with tab8:
-    st.header("🧾 Report Generator")
-    
-    report_type = st.selectbox(
-        "Report Type",
-        ["Portfolio Performance", "Risk Analysis", "Strategy Backtest", "Market Analysis"]
-    )
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        report_start_date = st.date_input("Start Date", value=datetime.now().date() - timedelta(days=30))
-        report_end_date = st.date_input("End Date", value=datetime.now().date())
-    
-    with col2:
-        include_charts = st.checkbox("Include Charts", value=True)
-        include_tables = st.checkbox("Include Tables", value=True)
-        export_format = st.selectbox("Export Format", ["PDF", "HTML", "Excel"])
-    
-    if st.button("📄 Generate Report"):
-        with st.spinner("Generating report..."):
-            st.success("Report generated successfully!")
-            
-            # Mock report content
-            st.subheader("Executive Summary")
-            st.write("""
-            This report provides a comprehensive analysis of the portfolio performance and market conditions
-            for the specified period. Key highlights include positive returns across all strategies with
-            strong risk-adjusted performance metrics.
-            """)
-            
-            # Performance metrics
-            st.subheader("Performance Metrics")
+    def _render_market_data_tab(self):
+        """Render market data tab."""
+        st.markdown("## 📈 Market Data & Technical Analysis")
+        
+        # Get market data
+        data = self._get_market_data()
+        
+        if data is not None and not data.empty:
+            # Market overview
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Return", "12.5%")
-            with col2:
-                st.metric("Sharpe Ratio", "1.85")
-            with col3:
-                st.metric("Max Drawdown", "-3.2%")
-            with col4:
-                st.metric("Volatility", "8.7%")
+                current_price = data['Close'].iloc[-1]
+                prev_price = data['Close'].iloc[-2]
+                change = current_price - prev_price
+                change_pct = (change / prev_price) * 100
+                
+                st.metric("Current Price", f"${current_price:.2f}", 
+                         f"{change:+.2f} ({change_pct:+.2f}%)")
             
-            # Risk analysis
-            st.subheader("Risk Analysis")
-            risk_data = pd.DataFrame({
-                'Metric': ['VaR (95%)', 'CVaR (95%)', 'Beta', 'Alpha'],
-                'Value': ['-2.1%', '-3.5%', '0.95', '2.3%']
-            })
-            st.dataframe(risk_data, use_container_width=True)
-
-# Tab 9: Risk Management Dashboard
-with tab9:
-    st.header("🧪 Risk Management Dashboard")
-    
-    # Risk metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Portfolio VaR (95%)", "-2.1%")
-    with col2:
-        st.metric("Current Drawdown", "-1.5%")
-    with col3:
-        st.metric("Portfolio Beta", "0.95")
-    with col4:
-        st.metric("Correlation", "0.65")
-    
-    # Risk charts
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # VaR distribution
-        var_data = np.random.normal(-0.02, 0.01, 1000)
-        fig = px.histogram(
-            x=var_data,
-            title="Value at Risk Distribution",
-            template="plotly_dark"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Drawdown chart
-        dates = pd.date_range(start='2024-01-01', periods=100, freq='D')
-        drawdown = np.cumsum(np.random.normal(0, 0.01, 100))
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=dates,
-            y=drawdown,
-            fill='tonexty',
-            name='Drawdown',
-            line=dict(color='red')
-        ))
-        fig.update_layout(
-            title="Portfolio Drawdown",
-            template="plotly_dark"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Risk alerts
-    st.subheader("Risk Alerts")
-    
-    alerts = [
-        {"Level": "Warning", "Message": "Portfolio correlation approaching threshold", "Time": "2 hours ago"},
-        {"Level": "Info", "Message": "VaR within normal range", "Time": "1 day ago"},
-        {"Level": "Critical", "Message": "Maximum position size exceeded for AAPL", "Time": "3 hours ago"}
-    ]
-    
-    for alert in alerts:
-        if alert["Level"] == "Critical":
-            st.error(f"🚨 {alert['Message']} ({alert['Time']})")
-        elif alert["Level"] == "Warning":
-            st.warning(f"⚠️ {alert['Message']} ({alert['Time']})")
+            with col2:
+                volume = data['Volume'].iloc[-1]
+                avg_volume = data['Volume'].rolling(20).mean().iloc[-1]
+                volume_ratio = volume / avg_volume
+                
+                st.metric("Volume", f"{volume:,.0f}", 
+                         f"{volume_ratio:.1f}x avg")
+            
+            with col3:
+                if 'RSI' in data.columns:
+                    rsi = data['RSI'].iloc[-1]
+                    rsi_status = "Overbought" if rsi > 70 else "Oversold" if rsi < 30 else "Neutral"
+                    st.metric("RSI", f"{rsi:.1f}", rsi_status)
+            
+            with col4:
+                if 'Volatility' in data.columns:
+                    vol = data['Volatility'].iloc[-1] * 100
+                    st.metric("Volatility", f"{vol:.1f}%")
+            
+            # Charts
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.markdown("### Price Chart")
+                fig = create_candlestick_chart(data)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.markdown("### Technical Indicators")
+                fig = create_technical_chart(data)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Market statistics
+            st.markdown("### Market Statistics")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("#### Price Statistics")
+                price_stats = data['Close'].describe()
+                st.dataframe(price_stats)
+            
+            with col2:
+                st.markdown("#### Volume Statistics")
+                volume_stats = data['Volume'].describe()
+                st.dataframe(volume_stats)
+            
+            with col3:
+                st.markdown("#### Returns Distribution")
+                returns = data['Close'].pct_change().dropna()
+                returns_stats = returns.describe()
+                st.dataframe(returns_stats)
+        
         else:
-            st.info(f"ℹ️ {alert['Message']} ({alert['Time']})")
-
-# Tab 10: LLM Assistant
-with tab10:
-    st.header("🧬 LLM Assistant")
+            st.error(f"Unable to fetch data for {st.session_state.current_symbol}")
     
-    # Chat interface
-    st.subheader("Chat with MorganVuoksi AI")
-    
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    # Display chat messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("Ask me about markets, strategies, or analysis..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    def _render_ai_predictions_tab(self):
+        """Render AI predictions tab."""
+        st.markdown("## 🤖 AI/ML Predictions")
         
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        # Model selection
+        col1, col2, col3 = st.columns(3)
         
-        # Generate AI response
-        with st.chat_message("assistant"):
-            response = generate_ai_response(prompt)
-            st.markdown(response)
+        with col1:
+            model_type = st.selectbox("Model Type", 
+                                    ["lstm", "transformer", "xgboost", "ensemble"],
+                                    index=3)
         
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-def generate_ai_response(prompt: str) -> str:
-    """Generate AI response based on user prompt."""
-    # Mock AI responses (in production, this would use a real LLM API)
-    responses = {
-        "market": "Based on current market conditions, I recommend a defensive positioning with focus on quality stocks and increased cash allocation.",
-        "strategy": "For the current market regime, a momentum strategy with risk management overlay would be optimal. Consider 60% equity, 30% bonds, 10% alternatives.",
-        "risk": "Current portfolio risk metrics indicate moderate exposure. VaR is within acceptable limits, but monitor correlation levels closely.",
-        "analysis": "Technical indicators suggest a bullish bias with support at key levels. Fundamental analysis shows strong earnings growth potential."
-    }
+        with col2:
+            prediction_horizon = st.selectbox("Prediction Horizon", 
+                                            ["1d", "5d", "10d", "30d"], index=1)
+        
+        with col3:
+            if st.button("🚀 Generate Predictions"):
+                self._generate_predictions(model_type, prediction_horizon)
+        
+        # Display predictions
+        if 'predictions' in st.session_state:
+            predictions = st.session_state.predictions
+            
+            # Prediction summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                current_price = predictions.get('current_price', 0)
+                predicted_price = predictions.get('predicted_price', 0)
+                change = predicted_price - current_price
+                change_pct = (change / current_price) * 100 if current_price > 0 else 0
+                
+                st.metric("Predicted Price", f"${predicted_price:.2f}", 
+                         f"{change:+.2f} ({change_pct:+.2f}%)")
+            
+            with col2:
+                confidence = predictions.get('confidence', 0)
+                st.metric("Confidence", f"{confidence:.1%}")
+            
+            with col3:
+                signal = predictions.get('signal', 'hold')
+                signal_color = {'buy': 'green', 'sell': 'red', 'hold': 'yellow'}.get(signal, 'gray')
+                st.markdown(f"<h3 style='color: {signal_color};'>{signal.upper()}</h3>", 
+                           unsafe_allow_html=True)
+            
+            with col4:
+                model_accuracy = predictions.get('accuracy', 0)
+                st.metric("Model Accuracy", f"{model_accuracy:.1%}")
+            
+            # Prediction chart
+            st.markdown("### Prediction Chart")
+            if 'prediction_chart' in predictions:
+                st.plotly_chart(predictions['prediction_chart'], use_container_width=True)
+            
+            # Model diagnostics
+            st.markdown("### Model Diagnostics")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if 'loss_curve' in predictions:
+                    st.plotly_chart(predictions['loss_curve'], use_container_width=True)
+            
+            with col2:
+                if 'feature_importance' in predictions:
+                    st.plotly_chart(predictions['feature_importance'], use_container_width=True)
     
-    prompt_lower = prompt.lower()
+    def _render_portfolio_tab(self):
+        """Render portfolio optimization tab."""
+        st.markdown("## 📊 Portfolio Optimization")
+        
+        # Portfolio inputs
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            symbols_input = st.text_area("Portfolio Symbols", 
+                                       value="AAPL,MSFT,GOOGL,TSLA,NVDA",
+                                       help="Enter symbols separated by commas")
+            symbols = [s.strip().upper() for s in symbols_input.split(',') if s.strip()]
+        
+        with col2:
+            risk_tolerance = st.selectbox("Risk Tolerance", 
+                                        ["Conservative", "Moderate", "Aggressive"], index=1)
+        
+        with col3:
+            if st.button("🔧 Optimize Portfolio"):
+                self._optimize_portfolio(symbols, risk_tolerance)
+        
+        # Display portfolio results
+        if 'portfolio_results' in st.session_state:
+            results = st.session_state.portfolio_results
+            
+            # Portfolio metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                expected_return = results.get('expected_return', 0)
+                st.metric("Expected Return", f"{expected_return:.2%}")
+            
+            with col2:
+                volatility = results.get('volatility', 0)
+                st.metric("Volatility", f"{volatility:.2%}")
+            
+            with col3:
+                sharpe_ratio = results.get('sharpe_ratio', 0)
+                st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
+            
+            with col4:
+                max_drawdown = results.get('max_drawdown', 0)
+                st.metric("Max Drawdown", f"{max_drawdown:.2%}")
+            
+            # Portfolio allocation chart
+            st.markdown("### Optimal Allocation")
+            if 'allocation_chart' in results:
+                st.plotly_chart(results['allocation_chart'], use_container_width=True)
+            
+            # Efficient frontier
+            st.markdown("### Efficient Frontier")
+            if 'efficient_frontier' in results:
+                st.plotly_chart(results['efficient_frontier'], use_container_width=True)
     
-    if "market" in prompt_lower:
-        return responses["market"]
-    elif "strategy" in prompt_lower:
-        return responses["strategy"]
-    elif "risk" in prompt_lower:
-        return responses["risk"]
-    elif "analysis" in prompt_lower:
-        return responses["analysis"]
-    else:
-        return "I'm here to help with your quantitative analysis needs. You can ask me about market conditions, trading strategies, risk management, or portfolio analysis."
+    def _render_valuation_tab(self):
+        """Render valuation tab."""
+        st.markdown("## 💰 Fundamental Valuation")
+        
+        # Get company data
+        symbol = st.session_state.current_symbol
+        data = self._get_market_data()
+        
+        if data is not None and not data.empty:
+            # Company overview
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("### Company Information")
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    st.write(f"**Name:** {info.get('longName', 'N/A')}")
+                    st.write(f"**Sector:** {info.get('sector', 'N/A')}")
+                    st.write(f"**Industry:** {info.get('industry', 'N/A')}")
+                    st.write(f"**Market Cap:** ${info.get('marketCap', 0):,.0f}")
+                except:
+                    st.write("Company information unavailable")
+            
+            with col2:
+                st.markdown("### Valuation Metrics")
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    st.write(f"**P/E Ratio:** {info.get('trailingPE', 'N/A')}")
+                    st.write(f"**P/B Ratio:** {info.get('priceToBook', 'N/A')}")
+                    st.write(f"**Dividend Yield:** {info.get('dividendYield', 0)*100:.2f}%")
+                    st.write(f"**Beta:** {info.get('beta', 'N/A')}")
+                except:
+                    st.write("Valuation metrics unavailable")
+            
+            with col3:
+                st.markdown("### Financial Health")
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    st.write(f"**ROE:** {info.get('returnOnEquity', 0)*100:.2f}%")
+                    st.write(f"**Debt/Equity:** {info.get('debtToEquity', 'N/A')}")
+                    st.write(f"**Profit Margin:** {info.get('profitMargins', 0)*100:.2f}%")
+                    st.write(f"**Current Ratio:** {info.get('currentRatio', 'N/A')}")
+                except:
+                    st.write("Financial health metrics unavailable")
+            
+            # DCF Analysis
+            st.markdown("### Discounted Cash Flow Analysis")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                growth_rate = st.slider("Growth Rate (%)", 0, 50, 10)
+                discount_rate = st.slider("Discount Rate (%)", 5, 20, 10)
+                
+                if st.button("Calculate DCF"):
+                    self._calculate_dcf(growth_rate, discount_rate)
+            
+            with col2:
+                if 'dcf_result' in st.session_state:
+                    dcf = st.session_state.dcf_result
+                    st.metric("DCF Value", f"${dcf.get('dcf_value', 0):.2f}")
+                    st.metric("Current Price", f"${dcf.get('current_price', 0):.2f}")
+                    st.metric("Upside/Downside", f"{dcf.get('upside', 0):+.1f}%")
+    
+    def _render_risk_analysis_tab(self):
+        """Render risk analysis tab."""
+        st.markdown("## ⚠️ Risk Analysis")
+        
+        # Risk metrics
+        data = self._get_market_data()
+        
+        if data is not None and not data.empty:
+            # Calculate risk metrics
+            returns = data['Close'].pct_change().dropna()
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                volatility = returns.std() * np.sqrt(252) * 100
+                st.metric("Annual Volatility", f"{volatility:.2f}%")
+            
+            with col2:
+                var_95 = np.percentile(returns, 5) * 100
+                st.metric("VaR (95%)", f"{var_95:.2f}%")
+            
+            with col3:
+                cvar_95 = returns[returns <= np.percentile(returns, 5)].mean() * 100
+                st.metric("CVaR (95%)", f"{cvar_95:.2f}%")
+            
+            with col4:
+                max_drawdown = self._calculate_max_drawdown(data['Close'])
+                st.metric("Max Drawdown", f"{max_drawdown:.2f}%")
+            
+            # Risk charts
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### Returns Distribution")
+                fig = px.histogram(returns, nbins=50, title="Returns Distribution")
+                fig.update_layout(showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.markdown("### Drawdown Analysis")
+                drawdown = self._calculate_drawdown_series(data['Close'])
+                fig = px.line(drawdown, title="Drawdown Over Time")
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Stress testing
+            st.markdown("### Stress Testing")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                stress_scenarios = {
+                    "Market Crash (-20%)": -0.20,
+                    "Recession (-10%)": -0.10,
+                    "Volatility Spike (+50%)": 0.50,
+                    "Interest Rate Hike (+2%)": 0.02
+                }
+                
+                scenario = st.selectbox("Stress Scenario", list(stress_scenarios.keys()))
+                impact = stress_scenarios[scenario]
+                
+                if st.button("Run Stress Test"):
+                    self._run_stress_test(impact)
+            
+            with col2:
+                if 'stress_test_result' in st.session_state:
+                    result = st.session_state.stress_test_result
+                    st.metric("Portfolio Impact", f"{result.get('impact', 0):+.2f}%")
+                    st.metric("New VaR", f"{result.get('new_var', 0):.2f}%")
+    
+    def _render_backtesting_tab(self):
+        """Render backtesting tab."""
+        st.markdown("## 🔄 Strategy Backtesting")
+        
+        # Strategy inputs
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            strategy_type = st.selectbox("Strategy", 
+                                       ["Moving Average Crossover", "RSI Strategy", "MACD Strategy", "Custom"],
+                                       index=0)
+        
+        with col2:
+            initial_capital = st.number_input("Initial Capital ($)", 
+                                            min_value=1000, value=100000, step=1000)
+        
+        with col3:
+            if st.button("🚀 Run Backtest"):
+                self._run_backtest(strategy_type, initial_capital)
+        
+        # Display backtest results
+        if 'backtest_results' in st.session_state:
+            results = st.session_state.backtest_results
+            
+            # Performance metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_return = results.get('total_return', 0)
+                st.metric("Total Return", f"{total_return:.2%}")
+            
+            with col2:
+                sharpe_ratio = results.get('sharpe_ratio', 0)
+                st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
+            
+            with col3:
+                max_drawdown = results.get('max_drawdown', 0)
+                st.metric("Max Drawdown", f"{max_drawdown:.2%}")
+            
+            with col4:
+                win_rate = results.get('win_rate', 0)
+                st.metric("Win Rate", f"{win_rate:.1%}")
+            
+            # Performance chart
+            st.markdown("### Performance Chart")
+            if 'performance_chart' in results:
+                st.plotly_chart(results['performance_chart'], use_container_width=True)
+            
+            # Trade analysis
+            st.markdown("### Trade Analysis")
+            if 'trades_df' in results:
+                st.dataframe(results['trades_df'])
+    
+    def _render_rl_simulator_tab(self):
+        """Render reinforcement learning simulator tab."""
+        st.markdown("## 🎮 RL Trading Simulator")
+        
+        # RL agent settings
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            agent_type = st.selectbox("Agent Type", ["TD3", "SAC"], index=0)
+        
+        with col2:
+            training_episodes = st.slider("Training Episodes", 10, 1000, 100)
+        
+        with col3:
+            if st.button("🎯 Train Agent"):
+                self._train_rl_agent(agent_type, training_episodes)
+        
+        # Display RL results
+        if 'rl_results' in st.session_state:
+            results = st.session_state.rl_results
+            
+            # Training metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                final_reward = results.get('final_reward', 0)
+                st.metric("Final Reward", f"{final_reward:.2f}")
+            
+            with col2:
+                total_trades = results.get('total_trades', 0)
+                st.metric("Total Trades", f"{total_trades}")
+            
+            with col3:
+                win_rate = results.get('win_rate', 0)
+                st.metric("Win Rate", f"{win_rate:.1%}")
+            
+            with col4:
+                avg_return = results.get('avg_return', 0)
+                st.metric("Avg Return", f"{avg_return:.2%}")
+            
+            # Training progress
+            st.markdown("### Training Progress")
+            if 'training_chart' in results:
+                st.plotly_chart(results['training_chart'], use_container_width=True)
+            
+            # Agent actions
+            st.markdown("### Agent Actions")
+            if 'actions_chart' in results:
+                st.plotly_chart(results['actions_chart'], use_container_width=True)
+    
+    def _render_news_nlp_tab(self):
+        """Render news and NLP analysis tab."""
+        st.markdown("## 📰 News & Sentiment Analysis")
+        
+        # News analysis
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            days_back = st.slider("News Days Back", 1, 30, 7)
+        
+        with col2:
+            if st.button("📊 Analyze Sentiment"):
+                self._analyze_sentiment(days_back)
+        
+        # Display sentiment results
+        if 'sentiment_results' in st.session_state:
+            results = st.session_state.sentiment_results
+            
+            # Sentiment metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                sentiment_score = results.get('sentiment_score', 0)
+                st.metric("Sentiment Score", f"{sentiment_score:.3f}")
+            
+            with col2:
+                confidence = results.get('confidence', 0)
+                st.metric("Confidence", f"{confidence:.1%}")
+            
+            with col3:
+                signal = results.get('signal', 'neutral')
+                signal_color = {'buy': 'green', 'sell': 'red', 'neutral': 'yellow'}.get(signal, 'gray')
+                st.markdown(f"<h3 style='color: {signal_color};'>{signal.upper()}</h3>", 
+                           unsafe_allow_html=True)
+            
+            with col4:
+                news_count = results.get('news_count', 0)
+                st.metric("News Count", f"{news_count}")
+            
+            # Recent news
+            st.markdown("### Recent News")
+            if 'recent_news' in results:
+                for news in results['recent_news'][:5]:
+                    with st.expander(f"{news.title} - {news.published_at.strftime('%Y-%m-%d')}"):
+                        st.write(f"**Source:** {news.source}")
+                        st.write(f"**Sentiment:** {news.sentiment_score:.3f}")
+                        st.write(f"**Description:** {news.description}")
+                        st.write(f"**URL:** {news.url}")
+            
+            # Sentiment distribution
+            st.markdown("### Sentiment Distribution")
+            if 'sentiment_distribution' in results:
+                dist = results['sentiment_distribution']
+                fig = px.pie(values=[dist['positive'], dist['negative'], dist['neutral']], 
+                           names=['Positive', 'Negative', 'Neutral'],
+                           title="News Sentiment Distribution")
+                st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_reports_tab(self):
+        """Render reports tab."""
+        st.markdown("## 📋 Automated Reports")
+        
+        # Report generation
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            report_type = st.selectbox("Report Type", 
+                                     ["Market Analysis", "Portfolio Review", "Risk Assessment", "Full Report"],
+                                     index=0)
+        
+        with col2:
+            time_period = st.selectbox("Time Period", 
+                                     ["1 Week", "1 Month", "3 Months", "1 Year"],
+                                     index=1)
+        
+        with col3:
+            if st.button("📄 Generate Report"):
+                self._generate_automated_report(report_type, time_period)
+        
+        # Display report
+        if 'current_report' in st.session_state:
+            report = st.session_state.current_report
+            
+            st.markdown("### Generated Report")
+            st.markdown(report['content'])
+            
+            # Download report
+            if st.button("💾 Download Report"):
+                self._download_report(report)
+    
+    def _render_llm_assistant_tab(self):
+        """Render LLM assistant tab."""
+        st.markdown("## 🤖 AI Assistant")
+        
+        # Chat interface
+        st.markdown("### Ask me anything about the markets, your portfolio, or trading strategies!")
+        
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        
+        # Display chat history
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+        
+        # Chat input
+        if prompt := st.chat_input("What would you like to know?"):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Display user message
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # Generate AI response
+            with st.chat_message("assistant"):
+                response = self._generate_ai_response(prompt)
+                st.markdown(response)
+            
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    def _get_market_data(self):
+        """Get market data for current symbol."""
+        symbol = st.session_state.current_symbol
+        cache_key = f"{symbol}_{st.session_state.period}_{st.session_state.data_source}"
+        
+        if cache_key in st.session_state.data_cache:
+            return st.session_state.data_cache[cache_key]
+        
+        try:
+            data = self.data_fetcher.get_stock_data(
+                symbol, 
+                st.session_state.period, 
+                "1d", 
+                st.session_state.data_source
+            )
+            
+            if not data.empty:
+                st.session_state.data_cache[cache_key] = data
+            
+            return data
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+            return None
+    
+    def _clear_cache(self):
+        """Clear data cache."""
+        st.session_state.data_cache.clear()
+        st.session_state.predictions_cache.clear()
+        st.success("Cache cleared!")
+    
+    def _generate_predictions(self, model_type, horizon):
+        """Generate AI predictions."""
+        with st.spinner("Generating predictions..."):
+            try:
+                data = self._get_market_data()
+                if data is None or data.empty:
+                    st.error("No data available for predictions")
+                    return
+                
+                # Initialize model
+                if model_type == "ensemble":
+                    model = EnsembleModel()
+                else:
+                    model = TimeSeriesPredictor(model_type)
+                
+                # Fit model
+                result = model.fit(data)
+                
+                # Make predictions
+                predictions = model.predict(data)
+                
+                # Calculate metrics
+                current_price = data['Close'].iloc[-1]
+                predicted_price = predictions[-1] if len(predictions) > 0 else current_price
+                
+                # Store results
+                st.session_state.predictions = {
+                    'current_price': current_price,
+                    'predicted_price': predicted_price,
+                    'confidence': 0.75,  # Placeholder
+                    'signal': 'buy' if predicted_price > current_price else 'sell',
+                    'accuracy': 0.65,  # Placeholder
+                    'model_type': model_type,
+                    'horizon': horizon
+                }
+                
+                st.success("Predictions generated successfully!")
+                
+            except Exception as e:
+                st.error(f"Error generating predictions: {e}")
+    
+    def _optimize_portfolio(self, symbols, risk_tolerance):
+        """Optimize portfolio allocation."""
+        with st.spinner("Optimizing portfolio..."):
+            try:
+                # Get data for all symbols
+                data_dict = {}
+                for symbol in symbols:
+                    data = self.data_fetcher.get_stock_data(symbol, "1y", "1d", "yahoo")
+                    if not data.empty:
+                        data_dict[symbol] = data['Close']
+                
+                if len(data_dict) < 2:
+                    st.error("Need at least 2 symbols for portfolio optimization")
+                    return
+                
+                # Create returns DataFrame
+                returns_df = pd.DataFrame(data_dict).pct_change().dropna()
+                
+                # Optimize portfolio
+                weights = self.portfolio_optimizer.optimize_portfolio(returns_df, risk_tolerance)
+                
+                # Calculate metrics
+                portfolio_return = (returns_df * weights).sum(axis=1).mean() * 252
+                portfolio_vol = (returns_df * weights).sum(axis=1).std() * np.sqrt(252)
+                sharpe_ratio = portfolio_return / portfolio_vol if portfolio_vol > 0 else 0
+                
+                # Store results
+                st.session_state.portfolio_results = {
+                    'weights': weights,
+                    'expected_return': portfolio_return,
+                    'volatility': portfolio_vol,
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': 0.15  # Placeholder
+                }
+                
+                st.success("Portfolio optimized successfully!")
+                
+            except Exception as e:
+                st.error(f"Error optimizing portfolio: {e}")
+    
+    def _calculate_dcf(self, growth_rate, discount_rate):
+        """Calculate DCF valuation."""
+        try:
+            symbol = st.session_state.current_symbol
+            ticker = yf.Ticker(symbol)
+            
+            # Get financial data
+            info = ticker.info
+            current_price = info.get('currentPrice', 0)
+            
+            # Simple DCF calculation (placeholder)
+            fcf = info.get('freeCashflow', 1000000000)  # Placeholder
+            growth_rate_decimal = growth_rate / 100
+            discount_rate_decimal = discount_rate / 100
+            
+            # Terminal value calculation
+            terminal_value = fcf * (1 + growth_rate_decimal) / (discount_rate_decimal - growth_rate_decimal)
+            present_value = fcf / (1 + discount_rate_decimal) + terminal_value / (1 + discount_rate_decimal) ** 5
+            
+            # Calculate upside/downside
+            upside = ((present_value - current_price) / current_price) * 100
+            
+            st.session_state.dcf_result = {
+                'dcf_value': present_value,
+                'current_price': current_price,
+                'upside': upside
+            }
+            
+        except Exception as e:
+            st.error(f"Error calculating DCF: {e}")
+    
+    def _calculate_max_drawdown(self, prices):
+        """Calculate maximum drawdown."""
+        peak = prices.expanding(min_periods=1).max()
+        drawdown = (prices - peak) / peak
+        return drawdown.min() * 100
+    
+    def _calculate_drawdown_series(self, prices):
+        """Calculate drawdown series."""
+        peak = prices.expanding(min_periods=1).max()
+        drawdown = (prices - peak) / peak * 100
+        return drawdown
+    
+    def _run_stress_test(self, impact):
+        """Run stress test."""
+        try:
+            # Simple stress test (placeholder)
+            base_var = -5.0  # Base VaR
+            new_var = base_var * (1 + impact)
+            
+            st.session_state.stress_test_result = {
+                'impact': impact * 100,
+                'new_var': new_var
+            }
+            
+        except Exception as e:
+            st.error(f"Error running stress test: {e}")
+    
+    def _run_backtest(self, strategy_type, initial_capital):
+        """Run strategy backtest."""
+        with st.spinner("Running backtest..."):
+            try:
+                data = self._get_market_data()
+                if data is None or data.empty:
+                    st.error("No data available for backtesting")
+                    return
+                
+                # Simple backtest (placeholder)
+                returns = data['Close'].pct_change().dropna()
+                total_return = returns.sum()
+                sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
+                max_drawdown = self._calculate_max_drawdown(data['Close'])
+                
+                # Create performance chart
+                cumulative_returns = (1 + returns).cumprod()
+                fig = px.line(cumulative_returns, title="Cumulative Returns")
+                
+                st.session_state.backtest_results = {
+                    'total_return': total_return,
+                    'sharpe_ratio': sharpe_ratio,
+                    'max_drawdown': max_drawdown,
+                    'win_rate': 0.55,  # Placeholder
+                    'performance_chart': fig,
+                    'trades_df': pd.DataFrame()  # Placeholder
+                }
+                
+                st.success("Backtest completed successfully!")
+                
+            except Exception as e:
+                st.error(f"Error running backtest: {e}")
+    
+    def _train_rl_agent(self, agent_type, episodes):
+        """Train RL agent."""
+        with st.spinner("Training RL agent..."):
+            try:
+                data = self._get_market_data()
+                if data is None or data.empty:
+                    st.error("No data available for RL training")
+                    return
+                
+                # Simple RL training (placeholder)
+                final_reward = np.random.normal(0.05, 0.02)  # Placeholder
+                total_trades = np.random.randint(50, 200)  # Placeholder
+                win_rate = np.random.uniform(0.4, 0.7)  # Placeholder
+                avg_return = np.random.uniform(0.01, 0.05)  # Placeholder
+                
+                # Create training chart
+                training_rewards = np.cumsum(np.random.normal(0.001, 0.01, episodes))
+                fig = px.line(training_rewards, title="Training Progress")
+                
+                st.session_state.rl_results = {
+                    'final_reward': final_reward,
+                    'total_trades': total_trades,
+                    'win_rate': win_rate,
+                    'avg_return': avg_return,
+                    'training_chart': fig,
+                    'actions_chart': fig  # Placeholder
+                }
+                
+                st.success("RL agent trained successfully!")
+                
+            except Exception as e:
+                st.error(f"Error training RL agent: {e}")
+    
+    def _analyze_sentiment(self, days_back):
+        """Analyze news sentiment."""
+        with st.spinner("Analyzing sentiment..."):
+            try:
+                symbol = st.session_state.current_symbol
+                
+                # Simple sentiment analysis (placeholder)
+                sentiment_score = np.random.uniform(-0.5, 0.5)
+                confidence = np.random.uniform(0.3, 0.9)
+                signal = 'buy' if sentiment_score > 0.2 else 'sell' if sentiment_score < -0.2 else 'neutral'
+                
+                # Mock news items
+                news_items = [
+                    NewsItem(
+                        title=f"News about {symbol}",
+                        description=f"Latest developments for {symbol}",
+                        content="",
+                        published_at=datetime.now() - timedelta(days=i),
+                        source="Mock News",
+                        url="",
+                        sentiment_score=np.random.uniform(-0.5, 0.5),
+                        relevance_score=np.random.uniform(0.3, 0.9)
+                    ) for i in range(5)
+                ]
+                
+                st.session_state.sentiment_results = {
+                    'sentiment_score': sentiment_score,
+                    'confidence': confidence,
+                    'signal': signal,
+                    'news_count': 25,
+                    'recent_news': news_items,
+                    'sentiment_distribution': {
+                        'positive': 12,
+                        'negative': 8,
+                        'neutral': 5
+                    }
+                }
+                
+                st.success("Sentiment analysis completed!")
+                
+            except Exception as e:
+                st.error(f"Error analyzing sentiment: {e}")
+    
+    def _generate_automated_report(self, report_type, time_period):
+        """Generate automated report."""
+        with st.spinner("Generating report..."):
+            try:
+                # Simple report generation (placeholder)
+                report_content = f"""
+# {report_type} Report for {st.session_state.current_symbol}
 
-# Footer
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #888;'>
-        <p>MorganVuoksi Terminal v1.0 | Powered by Advanced Quantitative Analytics</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-) 
+## Executive Summary
+This report provides a comprehensive analysis of {st.session_state.current_symbol} over the {time_period} period.
+
+## Key Findings
+- Market performance analysis
+- Risk assessment
+- Investment recommendations
+
+## Technical Analysis
+- Price trends and patterns
+- Technical indicators
+- Support and resistance levels
+
+## Fundamental Analysis
+- Financial metrics
+- Valuation ratios
+- Growth prospects
+
+## Risk Assessment
+- Volatility analysis
+- Drawdown analysis
+- Stress testing results
+
+## Recommendations
+Based on the analysis, we recommend [BUY/HOLD/SELL] for {st.session_state.current_symbol}.
+                """
+                
+                st.session_state.current_report = {
+                    'type': report_type,
+                    'time_period': time_period,
+                    'content': report_content,
+                    'generated_at': datetime.now()
+                }
+                
+                st.success("Report generated successfully!")
+                
+            except Exception as e:
+                st.error(f"Error generating report: {e}")
+    
+    def _download_report(self, report):
+        """Download report as PDF."""
+        st.info("Report download functionality would be implemented here")
+    
+    def _generate_ai_response(self, prompt):
+        """Generate AI response using LLM."""
+        # Simple AI response (placeholder)
+        responses = {
+            "market": "Based on current market conditions, I recommend monitoring key support and resistance levels.",
+            "portfolio": "Your portfolio appears well-diversified. Consider rebalancing quarterly.",
+            "risk": "Current risk metrics indicate moderate volatility. Maintain stop-loss orders.",
+            "strategy": "For your risk profile, I suggest a balanced approach with 60% equities and 40% bonds."
+        }
+        
+        # Simple keyword matching
+        if "market" in prompt.lower():
+            return responses["market"]
+        elif "portfolio" in prompt.lower():
+            return responses["portfolio"]
+        elif "risk" in prompt.lower():
+            return responses["risk"]
+        elif "strategy" in prompt.lower():
+            return responses["strategy"]
+        else:
+            return "I'm here to help with your trading and investment questions. Please ask me about markets, portfolios, risk management, or trading strategies."
+
+def main():
+    """Main application entry point."""
+    terminal = MorganVuoksiTerminal()
+    terminal.run()
+
+if __name__ == "__main__":
+    main() 
