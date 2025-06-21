@@ -4,36 +4,26 @@ Provides interactive and static visualizations for portfolio analysis,
 signal strength, risk metrics, and strategy comparison.
 """
 
-from .portfolio_visuals import (
-    plot_equity_curve,
-    plot_rolling_metrics,
-    plot_trade_annotations,
-    plot_risk_heatmap,
-    plot_strategy_comparison
-)
-
-from .signal_visuals import (
-    plot_signal_strength,
-    plot_feature_importance,
-    plot_signal_decay
-)
-
-from .risk_visuals import (
-    plot_risk_decomposition,
-    plot_correlation_matrix,
-    plot_drawdown_analysis
+from .charting import (
+    create_candlestick_chart,
+    create_technical_chart,
+    create_prediction_chart,
+    create_loss_curve,
+    create_feature_importance_chart,
+    create_sentiment_chart,
+    create_portfolio_chart,
+    create_efficient_frontier_chart,
+    create_risk_dashboard
 )
 
 __all__ = [
-    'plot_equity_curve',
-    'plot_rolling_metrics',
-    'plot_trade_annotations',
-    'plot_risk_heatmap',
-    'plot_strategy_comparison',
-    'plot_signal_strength',
-    'plot_feature_importance',
-    'plot_signal_decay',
-    'plot_risk_decomposition',
-    'plot_correlation_matrix',
-    'plot_drawdown_analysis'
+    "create_candlestick_chart",
+    "create_technical_chart",
+    "create_prediction_chart",
+    "create_loss_curve",
+    "create_feature_importance_chart",
+    "create_sentiment_chart",
+    "create_portfolio_chart",
+    "create_efficient_frontier_chart",
+    "create_risk_dashboard"
 ] 

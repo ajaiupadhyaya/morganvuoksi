@@ -1,92 +1,55 @@
 version: '3.8'
 
 services:
-  dashboard:
+  morganvuoksi-terminal:
     build: .
+    container_name: morganvuoksi-terminal
     ports:
-      - "8050:8050"
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./exports:/app/exports
-      - ./logs:/app/logs
-    env_file:
-      - .env
+      - "8501:8501"
     environment:
-      - PYTHONUNBUFFERED=1
-      - SERVICE_TYPE=dashboard
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+      # API Keys (set these in .env file)
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_SECRET_KEY=${ALPACA_SECRET_KEY}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
+      - FRED_API_KEY=${FRED_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+    volumes:
+      - ./logs:/app/logs
+      - ./outputs:/app/outputs
+      - ./models:/app/models
+      - ./.env:/app/.env:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      - ml_engine
+    networks:
+      - morganvuoksi-network
 
-  ml_engine:
-    build: .
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - SERVICE_TYPE=ml_engine
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8050/status')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: morganvuoksi-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - morganvuoksi-network
 
-  scheduler:
-    build: .
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./logs:/app/logs
-    env_file:
-      - .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - SERVICE_TYPE=scheduler
-    restart: unless-stopped
-    command: python src/scheduler.py
-    depends_on:
-      - ml_engine
+networks:
+  morganvuoksi-network:
+    driver: bridge
 
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    ports:
-      - "9090:9090"
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-
-volumes:
-  prometheus_data:
-  grafana_data: 
+# volumes:
+#   redis_data: 

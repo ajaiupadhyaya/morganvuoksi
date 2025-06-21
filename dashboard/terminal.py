@@ -17,19 +17,27 @@ import os
 from typing import Dict, List, Optional
 import warnings
 
-# Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path to resolve module imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # Import our modules
-from data.market_data import MarketDataFetcher, DataConfig
-from models.advanced_models import TimeSeriesPredictor, ARIMAGARCHModel, EnsembleModel
-from models.rl_models import TD3Agent, SACAgent, TradingEnvironment
-from signals.nlp_signals import NLPSignalGenerator, FinancialNLPAnalyzer
-from portfolio.optimizer import PortfolioOptimizer
-from risk.risk_manager import RiskManager
-from visuals.dashboard import create_candlestick_chart, create_technical_chart
-from visuals.portfolio_visuals import create_portfolio_chart
-from visuals.risk_visuals import create_risk_dashboard
+from src.data.market_data import MarketDataFetcher, DataConfig
+from src.models.advanced_models import TimeSeriesPredictor, ARIMAGARCHModel, EnsembleModel
+from src.models.rl_models import TD3Agent, SACAgent, TradingEnvironment
+from src.signals.nlp_signals import NLPSignalGenerator, FinancialNLPAnalyzer
+from src.portfolio.optimizer import PortfolioOptimizer
+from src.risk.risk_manager import RiskManager
+from src.visuals.charting import (
+    create_candlestick_chart,
+    create_technical_chart,
+    create_portfolio_chart,
+    create_risk_dashboard,
+    create_prediction_chart,
+    create_loss_curve,
+    create_feature_importance_chart,
+    create_sentiment_chart,
+    create_efficient_frontier_chart
+)
 
 warnings.filterwarnings('ignore')
 
@@ -44,46 +52,284 @@ st.set_page_config(
 # Custom CSS for Bloomberg-style theme
 st.markdown("""
 <style>
+    /* Import Google Fonts for professional typography */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Global styles */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Main container */
     .main {
-        background-color: #0e1117;
-        color: #fafafa;
+        background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+        color: #e8eaed;
+        padding: 0;
+        margin: 0;
     }
+    
     .stApp {
-        background-color: #0e1117;
+        background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
     }
+    
+    /* Sidebar styling */
     .stSidebar {
-        background-color: #1e1e1e;
-        color: #fafafa;
-    }
-    .stTextInput, .stSelectbox, .stNumberInput {
-        background-color: #2d2d2d;
-        color: #fafafa;
-    }
-    .stButton > button {
-        background-color: #0066cc;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
-    }
-    .stButton > button:hover {
-        background-color: #0052a3;
-    }
-    .metric-card {
-        background-color: #2d2d2d;
+        background: linear-gradient(180deg, #1e2330 0%, #2a3142 100%);
+        border-right: 1px solid #3a4152;
         padding: 1rem;
+    }
+    
+    .stSidebar .sidebar-content {
+        background: transparent;
+    }
+    
+    /* Input styling */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div > select,
+    .stNumberInput > div > div > input {
+        background: #2a3142 !important;
+        border: 1px solid #3a4152 !important;
+        border-radius: 6px !important;
+        color: #e8eaed !important;
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+        transition: all 0.2s ease;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus,
+    .stNumberInput > div > div > input:focus {
+        border-color: #0066cc !important;
+        box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2) !important;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 10px 20px !important;
+        font-weight: 500 !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2) !important;
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0, 102, 204, 0.3) !important;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background: #1e2330;
+        border-radius: 8px 8px 0 0;
+        padding: 0;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: #2a3142;
+        border-radius: 0;
+        color: #a0a3a9;
+        font-weight: 500;
+        padding: 12px 20px;
+        border: none;
+        transition: all 0.2s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: #0066cc;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #3a4152;
+        color: #e8eaed;
+    }
+    
+    /* Metric cards */
+    .metric-card {
+        background: linear-gradient(135deg, #2a3142 0%, #1e2330 100%);
+        border: 1px solid #3a4152;
         border-radius: 8px;
-        border-left: 4px solid #0066cc;
+        padding: 1.5rem;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
     }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        border-color: #0066cc;
+    }
+    
+    .metric-card h3 {
+        color: #a0a3a9;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-card .value {
+        color: #e8eaed;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metric-card .change {
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    /* Price changes */
     .positive-change {
-        color: #00ff88;
+        color: #00d4aa;
+        background: rgba(0, 212, 170, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
     }
+    
     .negative-change {
-        color: #ff4444;
+        color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
     }
+    
     .neutral-change {
-        color: #cccccc;
+        color: #a0a3a9;
+    }
+    
+    /* Status indicators */
+    .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-live {
+        background: #00d4aa;
+        box-shadow: 0 0 8px rgba(0, 212, 170, 0.5);
+        animation: pulse 2s infinite;
+    }
+    
+    .status-warning {
+        background: #ffa726;
+        box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
+    }
+    
+    .status-error {
+        background: #ff6b6b;
+        box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    /* Data tables */
+    .dataframe {
+        background: #2a3142;
+        border: 1px solid #3a4152;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .dataframe th {
+        background: #1e2330;
+        color: #e8eaed;
+        font-weight: 600;
+        padding: 12px;
+        border-bottom: 1px solid #3a4152;
+    }
+    
+    .dataframe td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #3a4152;
+        color: #a0a3a9;
+    }
+    
+    .dataframe tr:hover {
+        background: #3a4152;
+    }
+    
+    /* Chart containers */
+    .chart-container {
+        background: #2a3142;
+        border: 1px solid #3a4152;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* Header styling */
+    .terminal-header {
+        background: linear-gradient(135deg, #1e2330 0%, #2a3142 100%);
+        border-bottom: 1px solid #3a4152;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .terminal-title {
+        color: #0066cc;
+        font-size: 28px;
+        font-weight: 700;
+        text-align: center;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
+    }
+    
+    .terminal-subtitle {
+        color: #a0a3a9;
+        font-size: 14px;
+        text-align: center;
+        margin: 0.5rem 0 0 0;
+        font-weight: 400;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .terminal-title {
+            font-size: 24px;
+        }
+        
+        .metric-card {
+            padding: 1rem;
+        }
+        
+        .metric-card .value {
+            font-size: 20px;
+        }
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #1e2330;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #3a4152;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #4a5568;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,20 +364,27 @@ class MorganVuoksiTerminal:
     
     def _render_header(self):
         """Render the terminal header."""
-        col1, col2, col3 = st.columns([2, 6, 2])
-        
-        with col1:
-            st.markdown("### 📈 MorganVuoksi")
-        
-        with col2:
-            st.markdown("<h1 style='text-align: center; color: #0066cc;'>Quantitative Trading Terminal</h1>", 
-                       unsafe_allow_html=True)
-        
-        with col3:
-            current_time = datetime.now().strftime("%H:%M:%S")
-            st.markdown(f"### {current_time}")
-        
-        st.markdown("---")
+        st.markdown("""
+        <div class="terminal-header">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;">
+                <div style="display: flex; align-items: center;">
+                    <span class="status-indicator status-live"></span>
+                    <span style="color: #a0a3a9; font-size: 12px; font-weight: 500;">LIVE DATA</span>
+                </div>
+                <div style="text-align: center;">
+                    <h1 class="terminal-title">MorganVuoksi Terminal</h1>
+                    <p class="terminal-subtitle">Institutional-Grade Quantitative Trading Platform</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #e8eaed; font-size: 16px; font-weight: 600;">{}</div>
+                    <div style="color: #a0a3a9; font-size: 12px;">{} UTC</div>
+                </div>
+            </div>
+        </div>
+        """.format(
+            datetime.now().strftime("%H:%M:%S"),
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ), unsafe_allow_html=True)
     
     def _render_sidebar(self):
         """Render the sidebar with controls."""
@@ -234,61 +487,126 @@ class MorganVuoksiTerminal:
                 prev_price = data['Close'].iloc[-2]
                 change = current_price - prev_price
                 change_pct = (change / prev_price) * 100
+                change_class = "positive-change" if change >= 0 else "negative-change"
+                change_icon = "↗" if change >= 0 else "↘"
                 
-                st.metric("Current Price", f"${current_price:.2f}", 
-                         f"{change:+.2f} ({change_pct:+.2f}%)")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Current Price</h3>
+                    <div class="value">${current_price:.2f}</div>
+                    <div class="change {change_class}">
+                        {change_icon} {change:+.2f} ({change_pct:+.2f}%)
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col2:
                 volume = data['Volume'].iloc[-1]
                 avg_volume = data['Volume'].rolling(20).mean().iloc[-1]
                 volume_ratio = volume / avg_volume
+                volume_status = "High" if volume_ratio > 1.5 else "Normal" if volume_ratio > 0.8 else "Low"
                 
-                st.metric("Volume", f"{volume:,.0f}", 
-                         f"{volume_ratio:.1f}x avg")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <h3>Volume</h3>
+                    <div class="value">{volume:,.0f}</div>
+                    <div class="change neutral-change">
+                        {volume_ratio:.1f}x avg ({volume_status})
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col3:
                 if 'RSI' in data.columns:
                     rsi = data['RSI'].iloc[-1]
                     rsi_status = "Overbought" if rsi > 70 else "Oversold" if rsi < 30 else "Neutral"
-                    st.metric("RSI", f"{rsi:.1f}", rsi_status)
+                    rsi_color = "#ff6b6b" if rsi > 70 else "#00d4aa" if rsi < 30 else "#a0a3a9"
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>RSI</h3>
+                        <div class="value" style="color: {rsi_color};">{rsi:.1f}</div>
+                        <div class="change neutral-change">{rsi_status}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="metric-card">
+                        <h3>RSI</h3>
+                        <div class="value">--</div>
+                        <div class="change neutral-change">N/A</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             with col4:
                 if 'Volatility' in data.columns:
                     vol = data['Volatility'].iloc[-1] * 100
-                    st.metric("Volatility", f"{vol:.1f}%")
+                    vol_status = "High" if vol > 30 else "Normal" if vol > 15 else "Low"
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>Volatility</h3>
+                        <div class="value">{vol:.1f}%</div>
+                        <div class="change neutral-change">{vol_status}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # Calculate volatility manually
+                    returns = data['Close'].pct_change().dropna()
+                    vol = returns.std() * np.sqrt(252) * 100
+                    vol_status = "High" if vol > 30 else "Normal" if vol > 15 else "Low"
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>Volatility</h3>
+                        <div class="value">{vol:.1f}%</div>
+                        <div class="change neutral-change">{vol_status}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             
-            # Charts
+            # Charts with enhanced styling
+            st.markdown("### Price Action & Technical Analysis")
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                st.markdown("### Price Chart")
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                st.markdown("#### Price Chart")
                 fig = create_candlestick_chart(data)
                 st.plotly_chart(fig, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### Technical Indicators")
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                st.markdown("#### Technical Indicators")
                 fig = create_technical_chart(data)
                 st.plotly_chart(fig, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
             
-            # Market statistics
+            # Market statistics with professional styling
             st.markdown("### Market Statistics")
             col1, col2, col3 = st.columns(3)
             
             with col1:
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
                 st.markdown("#### Price Statistics")
                 price_stats = data['Close'].describe()
-                st.dataframe(price_stats)
+                st.dataframe(price_stats, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
             
             with col2:
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
                 st.markdown("#### Volume Statistics")
                 volume_stats = data['Volume'].describe()
-                st.dataframe(volume_stats)
+                st.dataframe(volume_stats, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
             
             with col3:
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
                 st.markdown("#### Returns Distribution")
                 returns = data['Close'].pct_change().dropna()
                 returns_stats = returns.describe()
-                st.dataframe(returns_stats)
+                st.dataframe(returns_stats, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
         
         else:
             st.error(f"Unable to fetch data for {st.session_state.current_symbol}")
@@ -406,13 +724,15 @@ class MorganVuoksiTerminal:
             
             # Portfolio allocation chart
             st.markdown("### Optimal Allocation")
-            if 'allocation_chart' in results:
-                st.plotly_chart(results['allocation_chart'], use_container_width=True)
+            if 'weights' in results:
+                fig = create_portfolio_chart(results['weights'])
+                st.plotly_chart(fig, use_container_width=True)
             
             # Efficient frontier
             st.markdown("### Efficient Frontier")
-            if 'efficient_frontier' in results:
-                st.plotly_chart(results['efficient_frontier'], use_container_width=True)
+            if 'efficient_frontier' in st.session_state:
+                fig = create_efficient_frontier_chart(st.session_state.efficient_frontier)
+                st.plotly_chart(fig, use_container_width=True)
     
     def _render_valuation_tab(self):
         """Render valuation tab."""
@@ -512,6 +832,15 @@ class MorganVuoksiTerminal:
                 max_drawdown = self._calculate_max_drawdown(data['Close'])
                 st.metric("Max Drawdown", f"{max_drawdown:.2f}%")
             
+            # Risk Dashboard
+            st.markdown("### Risk Dashboard")
+            fig = create_risk_dashboard({
+                'volatility': volatility,
+                'var_95': var_95,
+                'max_drawdown': max_drawdown
+            })
+            st.plotly_chart(fig, use_container_width=True)
+
             # Risk charts
             col1, col2 = st.columns(2)
             
@@ -603,6 +932,13 @@ class MorganVuoksiTerminal:
             st.markdown("### Trade Analysis")
             if 'trades_df' in results:
                 st.dataframe(results['trades_df'])
+            
+            # Sentiment distribution
+            st.markdown("### Sentiment Distribution")
+            if 'sentiment_distribution' in results:
+                dist = results['sentiment_distribution']
+                fig = create_sentiment_chart(dist)
+                st.plotly_chart(fig, use_container_width=True)
     
     def _render_rl_simulator_tab(self):
         """Render reinforcement learning simulator tab."""
@@ -707,9 +1043,7 @@ class MorganVuoksiTerminal:
             st.markdown("### Sentiment Distribution")
             if 'sentiment_distribution' in results:
                 dist = results['sentiment_distribution']
-                fig = px.pie(values=[dist['positive'], dist['negative'], dist['neutral']], 
-                           names=['Positive', 'Negative', 'Neutral'],
-                           title="News Sentiment Distribution")
+                fig = create_sentiment_chart(dist)
                 st.plotly_chart(fig, use_container_width=True)
     
     def _render_reports_tab(self):
@@ -836,12 +1170,19 @@ class MorganVuoksiTerminal:
                 st.session_state.predictions = {
                     'current_price': current_price,
                     'predicted_price': predicted_price,
+                    'predictions': pd.Series(predictions, index=data.index[-len(predictions):]),
                     'confidence': 0.75,  # Placeholder
                     'signal': 'buy' if predicted_price > current_price else 'sell',
                     'accuracy': 0.65,  # Placeholder
                     'model_type': model_type,
-                    'horizon': horizon
+                    'horizon': horizon,
+                    'loss_curve': create_loss_curve(result.get('train_losses', []), result.get('test_losses', []))
                 }
+                
+                if 'feature_importance' in result:
+                    st.session_state.predictions['feature_importance'] = create_feature_importance_chart(
+                        result['feature_importance'], data.columns.tolist()
+                    )
                 
                 st.success("Predictions generated successfully!")
                 
@@ -867,21 +1208,14 @@ class MorganVuoksiTerminal:
                 returns_df = pd.DataFrame(data_dict).pct_change().dropna()
                 
                 # Optimize portfolio
-                weights = self.portfolio_optimizer.optimize_portfolio(returns_df, risk_tolerance)
+                optimization_result = self.portfolio_optimizer.optimize_portfolio(returns_df, risk_tolerance)
                 
-                # Calculate metrics
-                portfolio_return = (returns_df * weights).sum(axis=1).mean() * 252
-                portfolio_vol = (returns_df * weights).sum(axis=1).std() * np.sqrt(252)
-                sharpe_ratio = portfolio_return / portfolio_vol if portfolio_vol > 0 else 0
-                
+                # Calculate efficient frontier
+                efficient_frontier = self.portfolio_optimizer.calculate_efficient_frontier(returns_df)
+                st.session_state.efficient_frontier = efficient_frontier
+
                 # Store results
-                st.session_state.portfolio_results = {
-                    'weights': weights,
-                    'expected_return': portfolio_return,
-                    'volatility': portfolio_vol,
-                    'sharpe_ratio': sharpe_ratio,
-                    'max_drawdown': 0.15  # Placeholder
-                }
+                st.session_state.portfolio_results = optimization_result
                 
                 st.success("Portfolio optimized successfully!")
                 
@@ -971,7 +1305,8 @@ class MorganVuoksiTerminal:
                     'max_drawdown': max_drawdown,
                     'win_rate': 0.55,  # Placeholder
                     'performance_chart': fig,
-                    'trades_df': pd.DataFrame()  # Placeholder
+                    'trades_df': pd.DataFrame(),  # Placeholder
+                    'sentiment_distribution': {}  # Placeholder
                 }
                 
                 st.success("Backtest completed successfully!")
@@ -1127,6 +1462,10 @@ Based on the analysis, we recommend [BUY/HOLD/SELL] for {st.session_state.curren
             return responses["strategy"]
         else:
             return "I'm here to help with your trading and investment questions. Please ask me about markets, portfolios, risk management, or trading strategies."
+
+    def _generate_report(self):
+        """Generate a comprehensive market report."""
+        st.info("Report generation functionality would be implemented here")
 
 def main():
     """Main application entry point."""

@@ -3,4 +3,4 @@ build:
     web: Dockerfile
 
 run:
-  web: python src/main.py 
+  web: streamlit run dashboard/terminal.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true 
