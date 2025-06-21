@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 MorganVuoksi - Bloomberg-Style Quantitative Trading Terminal
 A comprehensive Streamlit dashboard for quantitative research and trading.
