@@ -267,20 +267,16 @@ def get_config() -> Dict[str, Any]:
                 'dropout': 0.1
             },
             'tft': {
-                'hidden_size': 64,
-                'num_layers': 2,
-                'dropout': 0.2,
-                'batch_size': 32,
-                'epochs': 50,
-                'learning_rate': 0.001
+                'input_size': 10,
+                'hidden': 64,
+                'output_size': 1,
+                'epochs': 20
             },
             'nbeats': {
-                'hidden_size': 64,
-                'num_layers': 2,
-                'dropout': 0.2,
-                'batch_size': 32,
-                'epochs': 50,
-                'learning_rate': 0.001
+                'input_size': 10,
+                'hidden': 64,
+                'output_size': 1,
+                'epochs': 20
             },
             'ppo': {
                 'learning_rate': 0.0003,
