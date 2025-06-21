@@ -5,6 +5,7 @@
 streamlit>=1.28.0
 plotly>=5.17.0
 altair>=5.1.0
+streamlit-option-menu>=0.3.6
 
 # Data manipulation and analysis
 pandas>=2.0.0
