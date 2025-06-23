@@ -384,4 +384,288 @@ def create_sentiment_chart(sentiment_data: Dict) -> go.Figure:
         height=400
     )
     
-    return fig 
+    return fig
+
+class AdvancedChartGenerator:
+    """Advanced chart generator for sophisticated financial visualizations."""
+    
+    def __init__(self):
+        self.default_colors = {
+            'primary': '#0066cc',
+            'secondary': '#00d4aa', 
+            'danger': '#ff6b6b',
+            'warning': '#ffa726',
+            'background': '#1e2330',
+            'surface': '#2a3142'
+        }
+    
+    def create_prediction_chart(self, historical_data, predictions, symbol):
+        """Create advanced prediction chart with confidence intervals."""
+        fig = go.Figure()
+        
+        # Historical data
+        fig.add_trace(go.Scatter(
+            x=historical_data.index,
+            y=historical_data['Close'],
+            mode='lines',
+            name='Historical Price',
+            line=dict(color=self.default_colors['primary'], width=2)
+        ))
+        
+        # Predictions
+        pred_dates = pd.date_range(
+            start=historical_data.index[-1],
+            periods=len(predictions['predictions']),
+            freq='D'
+        )
+        
+        fig.add_trace(go.Scatter(
+            x=pred_dates,
+            y=[p['predicted_price'] for p in predictions['predictions']],
+            mode='lines',
+            name='Predicted Price',
+            line=dict(color=self.default_colors['secondary'], width=2, dash='dash')
+        ))
+        
+        # Confidence intervals
+        fig.add_trace(go.Scatter(
+            x=pred_dates,
+            y=[p['confidence_upper'] for p in predictions['predictions']],
+            fill=None,
+            mode='lines',
+            line_color='rgba(0,100,80,0)',
+            showlegend=False
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=pred_dates,
+            y=[p['confidence_lower'] for p in predictions['predictions']],
+            fill='tonexty',
+            mode='lines',
+            line_color='rgba(0,100,80,0)',
+            name='Confidence Interval',
+            fillcolor='rgba(0,212,170,0.2)'
+        ))
+        
+        fig.update_layout(
+            title=f'{symbol} Price Prediction',
+            xaxis_title='Date',
+            yaxis_title='Price ($)',
+            template='plotly_dark',
+            height=500
+        )
+        
+        return fig
+    
+    def create_risk_dashboard(self, risk_data):
+        """Create comprehensive risk dashboard."""
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=('VaR Analysis', 'Stress Test Results', 
+                          'Portfolio Composition', 'Risk Metrics'),
+            specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                   [{"type": "pie"}, {"type": "indicator"}]]
+        )
+        
+        # VaR visualization
+        var_values = [risk_data['portfolio_risk']['var_95']]
+        fig.add_trace(
+            go.Bar(x=['VaR 95%'], y=var_values, 
+                  marker_color=self.default_colors['danger']),
+            row=1, col=1
+        )
+        
+        # Stress test results
+        stress_scenarios = list(risk_data['stress_tests'].keys())
+        stress_impacts = [risk_data['stress_tests'][s]['var_impact'] for s in stress_scenarios]
+        
+        fig.add_trace(
+            go.Bar(x=stress_scenarios, y=stress_impacts,
+                  marker_color=self.default_colors['warning']),
+            row=1, col=2
+        )
+        
+        # Portfolio composition (pie chart)
+        fig.add_trace(
+            go.Pie(labels=risk_data['symbols'], 
+                  values=risk_data['weights'],
+                  marker_colors=[self.default_colors['primary'], 
+                               self.default_colors['secondary']]),
+            row=2, col=1
+        )
+        
+        # Risk metrics indicator
+        fig.add_trace(
+            go.Indicator(
+                mode="gauge+number",
+                value=risk_data['risk_limits']['risk_score'],
+                title={'text': "Risk Score"},
+                gauge={'axis': {'range': [None, 100]},
+                      'bar': {'color': self.default_colors['primary']},
+                      'steps': [{'range': [0, 50], 'color': "lightgray"},
+                               {'range': [50, 100], 'color': "gray"}],
+                      'threshold': {'line': {'color': "red", 'width': 4},
+                                   'thickness': 0.75, 'value': 80}}
+            ),
+            row=2, col=2
+        )
+        
+        fig.update_layout(
+            title_text="Portfolio Risk Dashboard",
+            template='plotly_dark',
+            height=600
+        )
+        
+        return fig
+    
+    def create_portfolio_optimization_chart(self, efficient_frontier, optimal_portfolio):
+        """Create efficient frontier visualization."""
+        fig = go.Figure()
+        
+        # Efficient frontier
+        fig.add_trace(go.Scatter(
+            x=[p['volatility'] for p in efficient_frontier],
+            y=[p['return'] for p in efficient_frontier],
+            mode='lines+markers',
+            name='Efficient Frontier',
+            line=dict(color=self.default_colors['primary'], width=3),
+            marker=dict(size=6)
+        ))
+        
+        # Optimal portfolio
+        fig.add_trace(go.Scatter(
+            x=[optimal_portfolio['volatility']],
+            y=[optimal_portfolio['expected_return']],
+            mode='markers',
+            name='Optimal Portfolio',
+            marker=dict(
+                size=15,
+                color=self.default_colors['secondary'],
+                symbol='star'
+            )
+        ))
+        
+        fig.update_layout(
+            title='Portfolio Optimization - Efficient Frontier',
+            xaxis_title='Volatility (Risk)',
+            yaxis_title='Expected Return',
+            template='plotly_dark',
+            height=500
+        )
+        
+        return fig
+    
+    def create_sentiment_analysis_chart(self, sentiment_data):
+        """Create sentiment analysis visualization."""
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=('Sentiment Score', 'News Volume'),
+            specs=[[{"type": "indicator"}, {"type": "bar"}]]
+        )
+        
+        # Sentiment score gauge
+        fig.add_trace(
+            go.Indicator(
+                mode="gauge+number+delta",
+                value=sentiment_data['sentiment_score'],
+                domain={'x': [0, 1], 'y': [0, 1]},
+                title={'text': "Sentiment Score"},
+                delta={'reference': 0},
+                gauge={
+                    'axis': {'range': [-1, 1]},
+                    'bar': {'color': self.default_colors['primary']},
+                    'steps': [
+                        {'range': [-1, -0.3], 'color': self.default_colors['danger']},
+                        {'range': [-0.3, 0.3], 'color': 'lightgray'},
+                        {'range': [0.3, 1], 'color': self.default_colors['secondary']}
+                    ],
+                    'threshold': {
+                        'line': {'color': "red", 'width': 4},
+                        'thickness': 0.75,
+                        'value': 0.5
+                    }
+                }
+            ),
+            row=1, col=1
+        )
+        
+        # News volume
+        fig.add_trace(
+            go.Bar(
+                x=['News Count'],
+                y=[sentiment_data['news_count']],
+                marker_color=self.default_colors['secondary']
+            ),
+            row=1, col=2
+        )
+        
+        fig.update_layout(
+            title_text=f"Sentiment Analysis - {sentiment_data['symbol']}",
+            template='plotly_dark',
+            height=400
+        )
+        
+        return fig
+    
+    def create_backtest_results_chart(self, backtest_data):
+        """Create backtesting results visualization."""
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=('Portfolio Value', 'Monthly Returns', 
+                          'Performance Metrics', 'Drawdown Analysis')
+        )
+        
+        # Mock data for visualization
+        dates = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
+        portfolio_values = [backtest_data['initial_capital'] * (1 + 0.001 * i + np.random.normal(0, 0.01)) 
+                          for i in range(len(dates))]
+        
+        # Portfolio value over time
+        fig.add_trace(
+            go.Scatter(x=dates, y=portfolio_values, 
+                      mode='lines', name='Portfolio Value',
+                      line=dict(color=self.default_colors['primary'])),
+            row=1, col=1
+        )
+        
+        # Monthly returns
+        monthly_returns = np.random.normal(0.01, 0.05, 12)
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        fig.add_trace(
+            go.Bar(x=months, y=monthly_returns,
+                  marker_color=[self.default_colors['secondary'] if r > 0 
+                               else self.default_colors['danger'] for r in monthly_returns]),
+            row=1, col=2
+        )
+        
+        # Performance metrics
+        metrics = ['Sharpe Ratio', 'Max Drawdown', 'Win Rate']
+        values = [backtest_data['sharpe_ratio'], 
+                 abs(backtest_data['max_drawdown']), 
+                 backtest_data['win_rate']]
+        
+        fig.add_trace(
+            go.Bar(x=metrics, y=values,
+                  marker_color=self.default_colors['warning']),
+            row=2, col=1
+        )
+        
+        # Drawdown
+        drawdown = np.random.uniform(-0.1, 0, len(dates))
+        fig.add_trace(
+            go.Scatter(x=dates, y=drawdown,
+                      fill='tozeroy', mode='lines',
+                      fillcolor='rgba(255,107,107,0.3)',
+                      line=dict(color=self.default_colors['danger'])),
+            row=2, col=2
+        )
+        
+        fig.update_layout(
+            title_text="Backtesting Results Dashboard",
+            template='plotly_dark',
+            height=600
+        )
+        
+        return fig 
