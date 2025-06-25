@@ -1,0 +1,38 @@
+[global]
+# Development mode
+developmentMode = false
+
+# Sharing mode
+showWarningOnDirectExecution = false
+
+[server]
+# Web deployment settings
+port = 8501
+baseUrlPath = ""
+enableCORS = false
+enableXsrfProtection = true
+
+# Performance optimizations
+maxUploadSize = 200
+maxMessageSize = 200
+enableWebsocketCompression = true
+
+[browser]
+# Browser settings
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[theme]
+# Bloomberg-style theme
+primaryColor = "#00d4aa"
+backgroundColor = "#0a0e1a"
+secondaryBackgroundColor = "#1e2330"
+textColor = "#e8eaed"
+font = "sans serif"
+
+[client]
+# Client settings
+caching = true
+displayEnabled = true
+showErrorDetails = false
