@@ -1,28 +1,54 @@
-# Railway.app Production Requirements - Simplified
-# Only essential dependencies to avoid conflicts
+# MorganVuoksi Terminal - Full Production Requirements for Railway.app
+# All capabilities included with proper dependency resolution
 
 # Web Framework
 streamlit>=1.28.0
 plotly>=5.17.0
+fastapi>=0.104.1
+uvicorn>=0.24.0
+pydantic>=2.0.0
 
 # Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
+scipy>=1.10.0
+polars>=0.19.0
 
-# Machine Learning (core only)
+# Machine Learning & AI (Full Suite)
 scikit-learn>=1.3.0
 xgboost>=1.7.0
+transformers>=4.30.0
+statsmodels>=0.14.0
+arch>=6.2.0
+cvxpy>=1.3.0
+cvxopt>=1.3.0
 
-# Financial Data
+# Financial Data APIs
 yfinance>=0.2.18
+# Use alpaca-py instead of alpaca-trade-api to avoid websockets conflicts
+alpaca-py>=0.13.0
+polygon-api-client>=1.12.0
+
+# NLP & Sentiment Analysis
+textblob>=0.17.0
+nltk>=3.8.0
+beautifulsoup4>=4.12.0
 
 # API & Networking
 requests>=2.31.0
+aiohttp>=3.8.0
 python-dotenv>=1.0.0
+# Let websockets be managed by dependencies - don't pin version
+websockets>=9.0
 
 # Visualization
 matplotlib>=3.7.0
 seaborn>=0.12.0
+altair>=5.0.0
+
+# Database & Caching
+redis>=4.6.0
+sqlalchemy>=2.0.0
 
 # Utilities
 joblib>=1.3.0
@@ -30,18 +56,7 @@ tqdm>=4.65.0
 pyyaml>=6.0.0
 python-dateutil>=2.8.0
 
-# Remove all potentially conflicting packages
-# transformers>=4.30.0  # Too heavy and can cause conflicts
-# statsmodels>=0.14.0   # Can cause issues
-# arch>=6.2.0          # Can cause issues
-# cvxpy>=1.3.0         # Can cause issues
-# alpaca-py>=0.13.0    # Can cause websockets conflicts
-# polygon-api-client>=1.12.0  # Optional for now
-# textblob>=0.17.0     # Optional for now
-# nltk>=3.8.0          # Optional for now
-# beautifulsoup4>=4.12.0  # Optional for now
-# aiohttp>=3.8.0       # Can cause conflicts
-# websockets>=9.0,<12.0  # Let it be managed by dependencies
-# altair>=5.0.0        # Optional for now
-# redis>=4.6.0         # Optional for now
-# sqlalchemy>=2.0.0    # Optional for now 
+# Development & Testing (optional for production)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0 
