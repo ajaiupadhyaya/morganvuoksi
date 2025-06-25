@@ -1,0 +1,142 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Bloomberg Terminal inspired design system */
+
+@layer base {
+  :root {
+    --background: 10 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 10 10% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 10 10% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 25 100% 60%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 53%;
+
+    --accent: 25 100% 50%;
+    --accent-foreground: 0 0% 4%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 25 100% 60%;
+
+    --radius: 0.25rem;
+
+    --sidebar-background: 10 10% 6%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 25 100% 60%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 25 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-terminal-bg text-terminal-text font-sans antialiased;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
+  }
+
+  /* Terminal-like scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-terminal-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-terminal-border rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-terminal-orange;
+  }
+
+  /* Number formatting for financial data */
+  .financial-number {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Data table styling */
+  .data-table {
+    @apply w-full border-collapse;
+  }
+
+  .data-table th {
+    @apply bg-terminal-panel text-terminal-muted text-xs font-medium uppercase tracking-wider px-4 py-2 border-b border-terminal-border;
+  }
+
+  .data-table td {
+    @apply px-4 py-2 border-b border-terminal-border/50 text-sm;
+  }
+
+  .data-table tr:hover {
+    @apply bg-terminal-panel/50;
+  }
+
+  /* Panel styling */
+  .terminal-panel {
+    @apply bg-terminal-panel border border-terminal-border rounded-sm;
+  }
+
+  /* Status indicators */
+  .status-positive {
+    @apply text-terminal-green;
+  }
+
+  .status-negative {
+    @apply text-terminal-red;
+  }
+
+  .status-neutral {
+    @apply text-terminal-cyan;
+  }
+
+  /* Glow effects */
+  .glow-orange {
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  }
+}
+
+@layer components {
+  .terminal-button {
+    @apply bg-terminal-panel hover:bg-terminal-border text-terminal-text border border-terminal-border px-3 py-1.5 text-sm font-medium transition-colors duration-200;
+  }
+
+  .terminal-button:hover {
+    @apply border-terminal-orange text-terminal-orange;
+  }
+
+  .terminal-input {
+    @apply bg-terminal-panel border border-terminal-border text-terminal-text placeholder-terminal-muted px-3 py-2 text-sm focus:border-terminal-orange focus:outline-none focus:ring-1 focus:ring-terminal-orange;
+  }
+}
