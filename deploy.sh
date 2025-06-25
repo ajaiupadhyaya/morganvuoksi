@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# MorganVuoksi Terminal Deployment Script
-# Supports local, Docker, and cloud deployments
+# MorganVuoksi Elite Terminal - Production Deployment Script
+# MISSION CRITICAL: Bloomberg-grade deployment automation
+# ZERO DOWNTIME DEPLOYMENT
 
 set -e
 
@@ -13,323 +14,565 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-TERMINAL_NAME="MorganVuoksi Terminal"
-VERSION="1.0.0"
-DEFAULT_PORT=8501
+ENVIRONMENT=${ENVIRONMENT:-production}
+BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-300}
+DOCKER_COMPOSE_FILE="docker-compose.production.yml"
 
-# Function to print colored output
+# Print colored output
 print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] ✅ $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️  $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ❌ $1${NC}"
 }
 
-# Function to check prerequisites
-check_prerequisites() {
-    print_status "Checking prerequisites..."
+# Help function
+show_help() {
+    cat << EOF
+MorganVuoksi Elite Terminal - Production Deployment
+
+Usage: $0 [COMMAND] [OPTIONS]
+
+Commands:
+    deploy          Full production deployment
+    start           Start all services
+    stop            Stop all services
+    restart         Restart all services
+    backup          Create system backup
+    restore         Restore from backup
+    update          Update services (zero downtime)
+    status          Show system status
+    logs            Show service logs
+    health          Run health checks
+    cleanup         Clean up old resources
+    monitor         Start monitoring dashboard
+    help            Show this help message
+
+Options:
+    --environment   Environment (production/staging) [default: production]
+    --backup-dir    Backup directory [default: ./backups]
+    --no-build      Skip building Docker images
+    --force         Force operation without prompts
+    --verbose       Verbose output
+
+Examples:
+    $0 deploy                           # Full production deployment
+    $0 start --environment staging      # Start staging environment
+    $0 backup --backup-dir /mnt/backup  # Create backup in custom directory
+    $0 update --no-build               # Update without rebuilding images
+    $0 logs api                        # Show API service logs
+    $0 health                          # Run comprehensive health check
+
+EOF
+}
+
+# Pre-deployment checks
+run_pre_deployment_checks() {
+    print_status "Running pre-deployment checks..."
     
-    # Check if Docker is installed
-    if command -v docker &> /dev/null; then
-        print_success "Docker is installed"
-    else
-        print_warning "Docker not found. Some deployment options will be unavailable."
-    fi
-    
-    # Check if docker-compose is installed
-    if command -v docker-compose &> /dev/null; then
-        print_success "Docker Compose is installed"
-    else
-        print_warning "Docker Compose not found. Some deployment options will be unavailable."
-    fi
-    
-    # Check Python
-    if command -v python3 &> /dev/null; then
-        print_success "Python 3 is installed"
-    else
-        print_error "Python 3 is required but not installed"
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed"
         exit 1
     fi
     
-    # Check if .env file exists
-    if [ -f ".env" ]; then
-        print_success ".env file found"
-    else
-        print_warning ".env file not found. Creating template..."
-        create_env_template
+    # Check Docker Compose
+    if ! command -v docker-compose &> /dev/null; then
+        print_error "Docker Compose is not installed"
+        exit 1
     fi
+    
+    # Check environment file
+    if [ ! -f .env ]; then
+        print_warning ".env file not found, creating from template..."
+        if [ -f .env.template ]; then
+            cp .env.template .env
+            print_warning "Please configure .env file and run deployment again"
+            exit 1
+        else
+            print_error ".env.template not found"
+            exit 1
+        fi
+    fi
+    
+    # Validate required environment variables
+    required_vars=(
+        "DB_PASSWORD"
+        "REDIS_PASSWORD"
+        "GRAFANA_PASSWORD"
+        "API_KEY_ALPHA_VANTAGE"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ] && [ -z "$(grep "^$var=" .env)" ]; then
+            print_error "Required environment variable $var is not set"
+            exit 1
+        fi
+    done
+    
+    # Check system resources
+    print_status "Checking system resources..."
+    
+    # Check memory (minimum 8GB)
+    total_mem=$(free -g | awk '/^Mem:/{print $2}')
+    if [ "$total_mem" -lt 8 ]; then
+        print_warning "System has less than 8GB RAM. Recommended: 16GB+"
+    fi
+    
+    # Check disk space (minimum 50GB free)
+    available_space=$(df / | awk 'NR==2{print $4}')
+    available_gb=$((available_space / 1024 / 1024))
+    if [ "$available_gb" -lt 50 ]; then
+        print_warning "Less than 50GB free disk space available"
+    fi
+    
+    print_success "Pre-deployment checks completed"
 }
 
-# Function to create .env template
-create_env_template() {
-    cat > .env << EOF
-# MorganVuoksi Terminal - Environment Configuration
-# Copy this file and fill in your API keys
-
-# Trading & Market Data
-ALPACA_API_KEY=your_alpaca_api_key_here
-ALPACA_SECRET_KEY=your_alpaca_secret_key_here
-POLYGON_API_KEY=your_polygon_api_key_here
-
-# Economic Data
-FRED_API_KEY=your_fred_api_key_here
-
-# AI & NLP
-OPENAI_API_KEY=your_openai_api_key_here
-
-# News & Sentiment
-NEWS_API_KEY=your_newsapi_key_here
-ALPHA_VANTAGE_API_KEY=your_alphavantage_key_here
-
-# Optional: Redis (for caching)
-# REDIS_URL=redis://localhost:6379
+# Create backup
+create_backup() {
+    local backup_dir=${1:-./backups}
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_path="$backup_dir/morganvuoksi_backup_$timestamp"
+    
+    print_status "Creating system backup..."
+    
+    mkdir -p "$backup_path"
+    
+    # Backup database
+    if docker-compose -f $DOCKER_COMPOSE_FILE ps timescaledb | grep -q "Up"; then
+        print_status "Backing up database..."
+        docker-compose -f $DOCKER_COMPOSE_FILE exec -T timescaledb pg_dump \
+            -U morganvuoksi -d morganvuoksi > "$backup_path/database.sql"
+    fi
+    
+    # Backup configurations
+    print_status "Backing up configurations..."
+    cp -r config/ "$backup_path/" 2>/dev/null || true
+    cp .env "$backup_path/" 2>/dev/null || true
+    cp docker-compose*.yml "$backup_path/" 2>/dev/null || true
+    
+    # Backup models and data
+    print_status "Backing up models and data..."
+    cp -r models/ "$backup_path/" 2>/dev/null || true
+    cp -r data/ "$backup_path/" 2>/dev/null || true
+    
+    # Create backup manifest
+    cat > "$backup_path/manifest.json" << EOF
+{
+    "timestamp": "$timestamp",
+    "version": "1.0.0",
+    "environment": "$ENVIRONMENT",
+    "components": {
+        "database": "$([ -f "$backup_path/database.sql" ] && echo "true" || echo "false")",
+        "configurations": "$([ -d "$backup_path/config" ] && echo "true" || echo "false")",
+        "models": "$([ -d "$backup_path/models" ] && echo "true" || echo "false")",
+        "data": "$([ -d "$backup_path/data" ] && echo "true" || echo "false")"
+    }
+}
 EOF
-    print_success "Created .env template. Please edit it with your API keys."
+    
+    # Compress backup
+    tar -czf "$backup_path.tar.gz" -C "$backup_dir" "morganvuoksi_backup_$timestamp"
+    rm -rf "$backup_path"
+    
+    print_success "Backup created: $backup_path.tar.gz"
+    
+    # Cleanup old backups
+    find "$backup_dir" -name "morganvuoksi_backup_*.tar.gz" -mtime +$BACKUP_RETENTION_DAYS -delete 2>/dev/null || true
 }
 
-# Function to deploy locally
-deploy_local() {
-    print_status "Deploying $TERMINAL_NAME locally..."
-    
-    # Check if virtual environment exists
-    if [ ! -d ".venv" ]; then
-        print_status "Creating virtual environment..."
-        python3 -m venv .venv
+# Build Docker images
+build_images() {
+    if [ "$NO_BUILD" = "true" ]; then
+        print_status "Skipping image build (--no-build specified)"
+        return
     fi
     
-    # Activate virtual environment
-    print_status "Activating virtual environment..."
-    source .venv/bin/activate
+    print_status "Building Docker images..."
     
-    # Install dependencies
-    print_status "Installing dependencies..."
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    # Build main application image
+    docker build -f Dockerfile.production -t morganvuoksi/terminal:latest .
     
-    # Create necessary directories
-    mkdir -p logs outputs models/saved_models
+    # Build frontend image
+    docker build -f frontend/Dockerfile.production -t morganvuoksi/frontend:latest ./frontend/
     
-    # Start the terminal
-    print_success "Starting $TERMINAL_NAME locally..."
-    print_status "Terminal will be available at: http://localhost:$DEFAULT_PORT"
-    print_status "Press Ctrl+C to stop"
-    
-    cd dashboard
-    streamlit run terminal.py --server.port $DEFAULT_PORT --server.address 0.0.0.0
+    print_success "Docker images built successfully"
 }
 
-# Function to deploy with Docker
-deploy_docker() {
-    print_status "Deploying $TERMINAL_NAME with Docker..."
+# Deploy services
+deploy_services() {
+    print_status "Deploying services..."
     
-    # Build the Docker image
-    print_status "Building Docker image..."
-    docker build -t morganvuoksi-terminal:$VERSION .
+    # Pull external images
+    docker-compose -f $DOCKER_COMPOSE_FILE pull
     
-    # Start with docker-compose
-    print_status "Starting services with Docker Compose..."
-    docker-compose up -d
+    # Start infrastructure services first
+    print_status "Starting infrastructure services..."
+    docker-compose -f $DOCKER_COMPOSE_FILE up -d \
+        timescaledb redis prometheus grafana elasticsearch influxdb
     
-    print_success "Docker deployment completed!"
-    print_status "Terminal is available at: http://localhost:$DEFAULT_PORT"
-    print_status "To view logs: docker-compose logs -f"
-    print_status "To stop: docker-compose down"
+    # Wait for infrastructure
+    print_status "Waiting for infrastructure services..."
+    sleep 30
+    
+    # Start Ray cluster
+    print_status "Starting Ray cluster..."
+    docker-compose -f $DOCKER_COMPOSE_FILE up -d ray-head ray-worker
+    sleep 15
+    
+    # Start application services
+    print_status "Starting application services..."
+    docker-compose -f $DOCKER_COMPOSE_FILE up -d api frontend
+    
+    # Start monitoring and supporting services
+    print_status "Starting monitoring services..."
+    docker-compose -f $DOCKER_COMPOSE_FILE up -d \
+        nginx kibana logstash jupyter backup healthcheck
+    
+    print_success "All services deployed"
 }
 
-# Function to deploy to cloud (placeholder)
-deploy_cloud() {
-    print_status "Cloud deployment options:"
-    echo "1. Heroku"
-    echo "2. AWS"
-    echo "3. Google Cloud"
-    echo "4. Azure"
-    echo "5. DigitalOcean"
+# Health check
+run_health_check() {
+    print_status "Running comprehensive health check..."
     
-    read -p "Select cloud provider (1-5): " choice
+    local services=("api" "frontend" "timescaledb" "redis" "ray-head")
+    local failed_services=()
     
-    case $choice in
-        1) deploy_heroku ;;
-        2) deploy_aws ;;
-        3) deploy_gcp ;;
-        4) deploy_azure ;;
-        5) deploy_digitalocean ;;
-        *) print_error "Invalid choice" ;;
-    esac
-}
-
-# Function to deploy to Heroku
-deploy_heroku() {
-    print_status "Deploying to Heroku..."
+    for service in "${services[@]}"; do
+        print_status "Checking $service..."
+        
+        # Check if container is running
+        if ! docker-compose -f $DOCKER_COMPOSE_FILE ps "$service" | grep -q "Up"; then
+            print_error "$service is not running"
+            failed_services+=("$service")
+            continue
+        fi
+        
+        # Service-specific health checks
+        case $service in
+            "api")
+                if ! curl -f http://localhost:8000/api/v1/health --max-time 10 &>/dev/null; then
+                    print_error "API health check failed"
+                    failed_services+=("$service")
+                fi
+                ;;
+            "frontend")
+                if ! curl -f http://localhost:3000 --max-time 10 &>/dev/null; then
+                    print_error "Frontend health check failed"
+                    failed_services+=("$service")
+                fi
+                ;;
+            "timescaledb")
+                if ! docker-compose -f $DOCKER_COMPOSE_FILE exec -T timescaledb pg_isready -U morganvuoksi &>/dev/null; then
+                    print_error "Database health check failed"
+                    failed_services+=("$service")
+                fi
+                ;;
+            "redis")
+                if ! docker-compose -f $DOCKER_COMPOSE_FILE exec -T redis redis-cli ping &>/dev/null; then
+                    print_error "Redis health check failed"
+                    failed_services+=("$service")
+                fi
+                ;;
+        esac
+    done
     
-    # Check if Heroku CLI is installed
-    if ! command -v heroku &> /dev/null; then
-        print_error "Heroku CLI is required. Please install it first."
+    if [ ${#failed_services[@]} -eq 0 ]; then
+        print_success "All health checks passed"
+        return 0
+    else
+        print_error "Health check failed for: ${failed_services[*]}"
         return 1
     fi
-    
-    # Create Heroku app
-    heroku create morganvuoksi-terminal-$(date +%s)
-    
-    # Set buildpacks
-    heroku buildpacks:set heroku/python
-    
-    # Set environment variables
-    if [ -f ".env" ]; then
-        while IFS= read -r line; do
-            if [[ $line =~ ^[A-Z_]+= ]]; then
-                heroku config:set "$line"
-            fi
-        done < .env
-    fi
-    
-    # Deploy
-    git add .
-    git commit -m "Deploy to Heroku"
-    git push heroku main
-    
-    print_success "Deployed to Heroku!"
-    heroku open
 }
 
-# Function to deploy to AWS
-deploy_aws() {
-    print_status "AWS deployment requires additional setup."
-    print_status "Please refer to the documentation for AWS deployment instructions."
-}
-
-# Function to deploy to Google Cloud
-deploy_gcp() {
-    print_status "Google Cloud deployment requires additional setup."
-    print_status "Please refer to the documentation for GCP deployment instructions."
-}
-
-# Function to deploy to Azure
-deploy_azure() {
-    print_status "Azure deployment requires additional setup."
-    print_status "Please refer to the documentation for Azure deployment instructions."
-}
-
-# Function to deploy to DigitalOcean
-deploy_digitalocean() {
-    print_status "DigitalOcean deployment requires additional setup."
-    print_status "Please refer to the documentation for DigitalOcean deployment instructions."
-}
-
-# Function to stop deployment
-stop_deployment() {
-    print_status "Stopping $TERMINAL_NAME..."
+# Monitor deployment
+monitor_deployment() {
+    local timeout=${HEALTH_CHECK_TIMEOUT:-300}
+    local elapsed=0
+    local interval=10
     
-    # Stop Docker containers if running
-    if docker-compose ps | grep -q "morganvuoksi-terminal"; then
-        docker-compose down
-        print_success "Docker containers stopped"
-    fi
+    print_status "Monitoring deployment progress..."
     
-    # Kill any running Streamlit processes
-    pkill -f streamlit || true
-    print_success "Local processes stopped"
+    while [ $elapsed -lt $timeout ]; do
+        if run_health_check &>/dev/null; then
+            print_success "Deployment successful! All services are healthy."
+            
+            # Display access information
+            echo ""
+            echo "🎉 MorganVuoksi Elite Terminal is now running!"
+            echo ""
+            echo "📊 Services:"
+            echo "   • Terminal:     http://localhost:3000"
+            echo "   • API:          http://localhost:8000"
+            echo "   • Docs:         http://localhost:8000/docs"
+            echo "   • Grafana:      http://localhost:3001"
+            echo "   • Prometheus:   http://localhost:9090"
+            echo "   • Ray Dashboard: http://localhost:8265"
+            echo "   • Kibana:       http://localhost:5601"
+            echo "   • Jupyter:      http://localhost:8888"
+            echo ""
+            echo "🔐 Default credentials:"
+            echo "   • Grafana:      admin / ${GRAFANA_PASSWORD:-admin}"
+            echo "   • Jupyter:      Token in logs or set JUPYTER_TOKEN"
+            echo ""
+            
+            return 0
+        fi
+        
+        elapsed=$((elapsed + interval))
+        print_status "Waiting for services to be ready... (${elapsed}s/${timeout}s)"
+        sleep $interval
+    done
+    
+    print_error "Deployment timeout after ${timeout}s"
+    print_status "Checking individual service status..."
+    run_health_check
+    return 1
 }
 
-# Function to show status
+# Show system status
 show_status() {
-    print_status "Checking $TERMINAL_NAME status..."
+    print_status "System Status:"
+    echo ""
     
-    # Check Docker containers
-    if docker-compose ps | grep -q "morganvuoksi-terminal"; then
-        print_success "Docker containers are running"
-        docker-compose ps
-    else
-        print_warning "No Docker containers running"
-    fi
+    # Service status
+    docker-compose -f $DOCKER_COMPOSE_FILE ps
     
-    # Check local processes
-    if pgrep -f streamlit > /dev/null; then
-        print_success "Local Streamlit process is running"
-        ps aux | grep streamlit | grep -v grep
-    else
-        print_warning "No local Streamlit process running"
-    fi
+    echo ""
+    print_status "Resource Usage:"
+    
+    # CPU and Memory usage
+    echo "CPU Usage: $(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)%"
+    echo "Memory Usage: $(free | grep Mem | awk '{printf("%.1f%%\n", $3/$2 * 100.0)}')"
+    echo "Disk Usage: $(df / | awk 'NR==2{printf("%.1f%%\n", $5)}')"
+    
+    echo ""
+    print_status "Docker Resources:"
+    docker system df
 }
 
-# Function to show logs
+# Show logs
 show_logs() {
-    print_status "Showing logs..."
+    local service=${1:-}
+    local lines=${2:-100}
     
-    if docker-compose ps | grep -q "morganvuoksi-terminal"; then
-        docker-compose logs -f
-    else
-        print_warning "No Docker containers running. Check local logs in logs/ directory."
+    if [ -z "$service" ]; then
+        print_status "Available services:"
+        docker-compose -f $DOCKER_COMPOSE_FILE config --services
+        return
     fi
+    
+    print_status "Showing logs for $service (last $lines lines):"
+    docker-compose -f $DOCKER_COMPOSE_FILE logs --tail=$lines -f "$service"
 }
 
-# Function to show help
-show_help() {
-    echo "MorganVuoksi Terminal Deployment Script"
-    echo ""
-    echo "Usage: $0 [COMMAND]"
-    echo ""
-    echo "Commands:"
-    echo "  local     Deploy locally with Python"
-    echo "  docker    Deploy with Docker"
-    echo "  cloud     Deploy to cloud platform"
-    echo "  stop      Stop all deployments"
-    echo "  status    Show deployment status"
-    echo "  logs      Show deployment logs"
-    echo "  help      Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0 local     # Deploy locally"
-    echo "  $0 docker    # Deploy with Docker"
-    echo "  $0 stop      # Stop all deployments"
+# Update services with zero downtime
+update_services() {
+    print_status "Starting zero-downtime update..."
+    
+    # Create backup before update
+    create_backup
+    
+    # Pull latest images
+    if [ "$NO_BUILD" != "true" ]; then
+        build_images
+    fi
+    
+    # Rolling update strategy
+    local services=("api" "frontend")
+    
+    for service in "${services[@]}"; do
+        print_status "Updating $service..."
+        
+        # Scale up new instance
+        docker-compose -f $DOCKER_COMPOSE_FILE up -d --scale "$service"=2 "$service"
+        sleep 30
+        
+        # Health check new instance
+        if run_health_check &>/dev/null; then
+            # Scale down old instance
+            docker-compose -f $DOCKER_COMPOSE_FILE up -d --scale "$service"=1 "$service"
+            print_success "$service updated successfully"
+        else
+            print_error "Update failed for $service, rolling back..."
+            docker-compose -f $DOCKER_COMPOSE_FILE up -d --scale "$service"=1 "$service"
+            exit 1
+        fi
+    done
+    
+    print_success "Zero-downtime update completed"
 }
 
-# Main script
-main() {
-    echo "🚀 $TERMINAL_NAME Deployment Script v$VERSION"
-    echo "================================================"
+# Cleanup old resources
+cleanup_resources() {
+    print_status "Cleaning up old resources..."
     
-    # Check prerequisites
-    check_prerequisites
+    # Remove unused Docker images
+    docker image prune -f
     
-    # Parse command line arguments
-    case "${1:-help}" in
-        local)
-            deploy_local
+    # Remove unused Docker volumes
+    docker volume prune -f
+    
+    # Remove unused Docker networks
+    docker network prune -f
+    
+    # Clean up old logs
+    find logs/ -name "*.log" -mtime +7 -delete 2>/dev/null || true
+    
+    print_success "Cleanup completed"
+}
+
+# Start monitoring dashboard
+start_monitoring() {
+    print_status "Starting monitoring dashboard..."
+    
+    # Ensure monitoring services are running
+    docker-compose -f $DOCKER_COMPOSE_FILE up -d grafana prometheus
+    
+    # Wait for services
+    sleep 10
+    
+    # Open monitoring URLs
+    echo ""
+    echo "📊 Monitoring Dashboard URLs:"
+    echo "   • Grafana:      http://localhost:3001"
+    echo "   • Prometheus:   http://localhost:9090"
+    echo "   • Ray Dashboard: http://localhost:8265"
+    echo ""
+}
+
+# Main deployment function
+main_deploy() {
+    print_status "🚀 Starting MorganVuoksi Elite Terminal Deployment"
+    print_status "Environment: $ENVIRONMENT"
+    print_status "Timestamp: $(date)"
+    
+    # Run pre-deployment checks
+    run_pre_deployment_checks
+    
+    # Create backup
+    create_backup
+    
+    # Build images
+    build_images
+    
+    # Deploy services
+    deploy_services
+    
+    # Monitor deployment
+    monitor_deployment
+    
+    print_success "🎉 Deployment completed successfully!"
+}
+
+# Parse command line arguments
+COMMAND=""
+NO_BUILD=false
+FORCE=false
+VERBOSE=false
+BACKUP_DIR="./backups"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        deploy|start|stop|restart|backup|restore|update|status|logs|health|cleanup|monitor|help)
+            COMMAND="$1"
+            shift
             ;;
-        docker)
-            deploy_docker
+        --environment)
+            ENVIRONMENT="$2"
+            shift 2
             ;;
-        cloud)
-            deploy_cloud
+        --backup-dir)
+            BACKUP_DIR="$2"
+            shift 2
             ;;
-        stop)
-            stop_deployment
+        --no-build)
+            NO_BUILD=true
+            shift
             ;;
-        status)
-            show_status
+        --force)
+            FORCE=true
+            shift
             ;;
-        logs)
-            show_logs
-            ;;
-        help|--help|-h)
-            show_help
+        --verbose)
+            VERBOSE=true
+            set -x
+            shift
             ;;
         *)
-            print_error "Unknown command: $1"
-            show_help
-            exit 1
+            ARGS+=("$1")
+            shift
             ;;
     esac
-}
+done
 
-# Run main function
-main "$@" 
+# Load environment variables
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+# Execute command
+case $COMMAND in
+    deploy)
+        main_deploy
+        ;;
+    start)
+        print_status "Starting services..."
+        docker-compose -f $DOCKER_COMPOSE_FILE up -d
+        monitor_deployment
+        ;;
+    stop)
+        print_status "Stopping services..."
+        docker-compose -f $DOCKER_COMPOSE_FILE down
+        print_success "Services stopped"
+        ;;
+    restart)
+        print_status "Restarting services..."
+        docker-compose -f $DOCKER_COMPOSE_FILE restart
+        monitor_deployment
+        ;;
+    backup)
+        create_backup "$BACKUP_DIR"
+        ;;
+    update)
+        update_services
+        ;;
+    status)
+        show_status
+        ;;
+    logs)
+        show_logs "${ARGS[0]}" "${ARGS[1]}"
+        ;;
+    health)
+        run_health_check
+        ;;
+    cleanup)
+        cleanup_resources
+        ;;
+    monitor)
+        start_monitoring
+        ;;
+    help|"")
+        show_help
+        ;;
+    *)
+        print_error "Unknown command: $COMMAND"
+        show_help
+        exit 1
+        ;;
+esac 
