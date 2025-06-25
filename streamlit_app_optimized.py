@@ -39,21 +39,26 @@ except ImportError as e:
 # Bloomberg Terminal CSS - Enhanced for production
 BLOOMBERG_TERMINAL_CSS = """
 <style>
-    /* Global Terminal Styling */
+    /* BLOOMBERG TERMINAL - EXACT PROFESSIONAL REPLICATION */
     .stApp {
-        background: linear-gradient(135deg, #000000 0%, #0a0e1a 100%);
-        color: #e8eaed;
-        font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+        background: #000000 !important;
+        color: #ffffff !important;
+        font-family: 'JetBrains Mono', 'Monaco', 'Consolas', 'Courier New', monospace !important;
+        letter-spacing: 0.025em;
+        line-height: 1.3;
     }
     
-    /* Enhanced Header */
+    /* Enhanced Bloomberg Terminal Header */
     .terminal-header {
-        background: linear-gradient(90deg, #000000 0%, #1a1a2e 50%, #000000 100%);
-        border: 2px solid #00d4aa;
-        border-radius: 8px;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        border: 2px solid #ff6b35;
+        border-radius: 0px;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        box-shadow: 
+            inset 0 1px 0 rgba(0, 212, 255, 0.1),
+            0 2px 4px rgba(0, 0, 0, 0.8),
+            0 0 20px rgba(255, 107, 53, 0.3);
         position: relative;
         overflow: hidden;
     }
@@ -92,40 +97,47 @@ BLOOMBERG_TERMINAL_CSS = """
     }
     
     .ai-active {
-        background: linear-gradient(45deg, #00d4aa, #00ff88);
-        color: #000;
-        box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        background: linear-gradient(45deg, #00d4ff, #00ff88);
+        color: #000000;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     }
     
     .ai-training {
-        background: linear-gradient(45deg, #ff6b35, #f9ca24);
-        color: #000;
+        background: linear-gradient(45deg, #ff6b35, #ffa500);
+        color: #000000;
         box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
     }
     
-    /* Enhanced Metrics */
+    /* Enhanced Bloomberg Metrics */
     .metric-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        border: 1px solid #00d4aa;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        border: 1px solid #333333;
+        border-radius: 0px;
         padding: 1rem;
         margin: 0.5rem;
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
+        box-shadow: 
+            inset 0 1px 0 rgba(0, 212, 255, 0.1),
+            0 2px 4px rgba(0, 0, 0, 0.8);
     }
     
     .metric-card:hover {
-        border-color: #00ff88;
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        border-color: #ff6b35;
+        box-shadow: 
+            0 0 15px rgba(255, 107, 53, 0.3),
+            inset 0 0 0 1px #00d4ff;
         transform: translateY(-2px);
     }
     
     .metric-value {
         font-size: 2rem;
         font-weight: bold;
-        color: #00d4aa;
-        text-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+        color: #00d4ff;
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.1em;
     }
     
     .metric-label {
@@ -167,37 +179,59 @@ BLOOMBERG_TERMINAL_CSS = """
         box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
     }
     
-    /* Terminal Command Interface */
+    /* Bloomberg Terminal Command Interface */
     .command-interface {
-        background: #000;
-        border: 2px solid #00d4aa;
-        border-radius: 5px;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        border: 2px solid #00d4ff;
+        border-radius: 0px;
         padding: 10px;
         font-family: 'JetBrains Mono', monospace;
-        color: #00d4aa;
+        color: #00d4ff;
         margin: 10px 0;
+        box-shadow: 
+            inset 0 1px 0 rgba(0, 212, 255, 0.1),
+            0 2px 4px rgba(0, 0, 0, 0.8);
     }
     
-    /* Data Tables */
+    /* Bloomberg Professional Data Tables */
     .dataframe {
-        background: linear-gradient(135deg, #0a0e1a 0%, #1a1a2e 100%);
-        border: 1px solid #333;
-        border-radius: 8px;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        border: 1px solid #333333;
+        border-radius: 0px;
         overflow: hidden;
+        box-shadow: 
+            inset 0 1px 0 rgba(0, 212, 255, 0.1),
+            0 2px 4px rgba(0, 0, 0, 0.8);
     }
     
     .dataframe th {
-        background: #1a1a2e;
-        color: #00d4aa;
+        background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        color: #00d4ff;
         font-weight: bold;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
         padding: 12px;
-        border-bottom: 1px solid #00d4aa;
+        border-bottom: 2px solid #00d4ff;
     }
     
     .dataframe td {
-        padding: 10px;
-        border-bottom: 1px solid #333;
-        color: #e8eaed;
+        padding: 8px 12px;
+        border-bottom: 1px solid #333333;
+        color: #ffffff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        background: rgba(10, 10, 10, 0.8);
+    }
+    
+    .dataframe tr:hover {
+        background: rgba(26, 26, 26, 0.8);
+        box-shadow: inset 0 0 0 1px #00d4ff;
+    }
+    
+    .dataframe tr:nth-child(even) {
+        background: rgba(26, 26, 26, 0.5);
     }
     
     /* Real-time Data Indicators */
@@ -296,32 +330,98 @@ def render_terminal_header():
     st.markdown("""
     <div class="terminal-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1 style="color: #00d4aa; margin: 0; font-size: 2rem; font-weight: bold;">
-                    🏛️ MORGANVUOKSI TERMINAL
-                </h1>
-                <p style="color: #b8bcc8; margin: 5px 0 0 0; font-size: 0.9rem;">
-                    AI-POWERED QUANTITATIVE TRADING PLATFORM | BLOOMBERG-STYLE INTERFACE
-                </p>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <!-- Terminal Logo & Status -->
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="position: relative;">
+                        <div style="color: #ff6b35; font-size: 1.75rem;">⬛</div>
+                        <div style="position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #00ff88; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                    </div>
+                    <div>
+                        <h1 style="color: #ff6b35; margin: 0; font-size: 1.5rem; font-weight: bold; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em;">
+                            BLOOMBERG TERMINAL
+                        </h1>
+                        <p style="color: #ffffff; margin: 2px 0 0 0; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; opacity: 0.8;">
+                            PROFESSIONAL EDITION v12.8.4 | USER: MORGANVUOKSI
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Live Market Status -->
+                <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.7rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border: 1px solid #00ff88;">
+                        <div style="width: 8px; height: 8px; background: #00ff88; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                        <span style="color: #00ff88; font-weight: bold; font-family: 'JetBrains Mono', monospace;">LIVE MARKET DATA</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #ffffff; opacity: 0.8;">
+                        <span style="font-family: 'JetBrains Mono', monospace;">🌐</span>
+                        <span style="font-family: 'JetBrains Mono', monospace;">{current_time} EST</span>
+                    </div>
+                </div>
+                
+                <!-- Major Indices -->
+                <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.7rem;">
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-weight: bold;">SPX:</span>
+                        <span style="color: #ffffff; font-family: 'JetBrains Mono', monospace;">4,521.23</span>
+                        <span style="color: #00ff88; font-family: 'JetBrains Mono', monospace;">+12.45</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-weight: bold;">NDX:</span>
+                        <span style="color: #ffffff; font-family: 'JetBrains Mono', monospace;">15,245.67</span>
+                        <span style="color: #ff4757; font-family: 'JetBrains Mono', monospace;">-8.23</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-weight: bold;">VIX:</span>
+                        <span style="color: #ffffff; font-family: 'JetBrains Mono', monospace;">18.42</span>
+                        <span style="color: #ff4757; font-family: 'JetBrains Mono', monospace;">-0.68</span>
+                    </div>
+                </div>
             </div>
-            <div style="text-align: right;">
-                <div style="color: #00d4aa; font-size: 1.2rem; font-weight: bold;">
-                    {current_time}
+            
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <!-- Function Key Shortcuts -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; color: #ffffff; opacity: 0.8; border-left: 1px solid #333333; padding-left: 1rem;">
+                    <kbd style="background: #333333; padding: 0.125rem 0.375rem; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; border-radius: 0;">F8</kbd>
+                    <span style="font-family: 'JetBrains Mono', monospace;">EQUITIES</span>
+                    <kbd style="background: #333333; padding: 0.125rem 0.375rem; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; border-radius: 0;">F9</kbd>
+                    <span style="font-family: 'JetBrains Mono', monospace;">BONDS</span>
+                    <kbd style="background: #333333; padding: 0.125rem 0.375rem; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; border-radius: 0;">F10</kbd>
+                    <span style="font-family: 'JetBrains Mono', monospace;">FX</span>
+                    <kbd style="background: #333333; padding: 0.125rem 0.375rem; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; border-radius: 0;">F11</kbd>
+                    <span style="font-family: 'JetBrains Mono', monospace;">CMDTY</span>
                 </div>
-                <div style="color: #ff6b35; font-size: 0.8rem;">
-                    LIVE MARKET DATA | AI ENHANCED
+
+                <!-- System Status -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.65rem; border-left: 1px solid #333333; padding-left: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #ffffff; opacity: 0.6;">💻</span>
+                        <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace;">12%</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #ffffff; opacity: 0.6;">🧠</span>
+                        <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace;">2.1GB</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #ffffff; opacity: 0.6;">📡</span>
+                        <span style="color: #00ff88; font-family: 'JetBrains Mono', monospace;">0.8ms</span>
+                    </div>
                 </div>
+
+                <!-- Connection Status -->
+                <div style="color: #00ff88; font-size: 1rem;">📶</div>
             </div>
         </div>
         <div class="ai-status">
             <div class="ai-indicator ai-active">AI ENGINE ACTIVE</div>
             <div class="ai-indicator ai-training">ML MODELS READY</div>
-            <div style="color: #00d4aa; font-size: 0.8rem; margin-left: auto;">
+            <div style="color: #00d4ff; font-size: 0.7rem; margin-left: auto; font-family: 'JetBrains Mono', monospace;">
                 🔄 REAL-TIME PROCESSING | ⚡ LOW LATENCY
             </div>
         </div>
     </div>
-    """.format(current_time=datetime.now().strftime("%H:%M:%S UTC")), unsafe_allow_html=True)
+    """.format(current_time=datetime.now().strftime("%H:%M:%S")), unsafe_allow_html=True)
 
 # Sidebar Configuration
 def render_sidebar():
@@ -787,19 +887,30 @@ def render_market_overview():
 
 def render_command_interface():
     """Render Bloomberg-style command interface."""
-    st.markdown("### 💻 TERMINAL COMMAND INTERFACE")
+    st.markdown("""
+    ### 💻 BLOOMBERG COMMAND LINE
+    <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); border: 2px solid #00d4ff; padding: 0.75rem; margin: 1rem 0; box-shadow: inset 0 1px 0 rgba(0, 212, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.8);">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="color: #ff6b35; font-family: 'JetBrains Mono', monospace; font-weight: bold; font-size: 0.75rem;">COMMAND:</span>
+            <span style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">▶</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     command = st.text_input(
-        "Enter Command",
-        placeholder="Type 'HELP' for available commands...",
-        key="terminal_command"
+        "",
+        placeholder="Enter Bloomberg command (e.g., AAPL <Equity> GP, SPX <Index> HP, NEWS <GO>)...",
+        key="terminal_command",
+        label_visibility="collapsed"
     )
     
     if command:
         st.markdown(f"""
         <div class="command-interface">
-            <div>> {command}</div>
-            <div style="color: #b8bcc8; margin-top: 5px;">
+            <div style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; margin-bottom: 0.5rem;">
+                > {command}
+            </div>
+            <div style="color: #ffffff; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; border-top: 1px solid #333333; padding-top: 0.5rem;">
                 {process_terminal_command(command)}
             </div>
         </div>
