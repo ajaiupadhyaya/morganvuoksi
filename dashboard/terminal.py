@@ -1,6 +1,6 @@
 """
-MorganVuoksi Terminal - Bloomberg-Style Quantitative Trading Terminal
-Modern, institutional-grade interface for quantitative research and trading.
+MorganVuoksi Bloomberg Terminal - Professional Trading Interface
+Exact Bloomberg Terminal replication with institutional-grade design.
 """
 
 import streamlit as st
@@ -20,319 +20,485 @@ import warnings
 # Add project root to path to resolve module imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-# Import our modules
-from src.data.market_data import MarketDataFetcher, DataConfig
-from src.models.advanced_models import TimeSeriesPredictor, ARIMAGARCHModel, EnsembleModel
-from src.models.rl_models import TD3Agent, SACAgent, TradingEnvironment
-from src.signals.nlp_signals import NLPSignalGenerator, FinancialNLPAnalyzer
-from src.portfolio.optimizer import PortfolioOptimizer
-from src.risk.risk_manager import RiskManager
-from src.visuals.charting import (
-    create_candlestick_chart,
-    create_technical_chart,
-    create_portfolio_chart,
-    create_risk_dashboard,
-    create_prediction_chart,
-    create_loss_curve,
-    create_feature_importance_chart,
-    create_sentiment_chart,
-    create_efficient_frontier_chart
-)
+# Import our modules with error handling
+try:
+    from src.data.market_data import MarketDataFetcher, DataConfig
+    from src.models.advanced_models import TimeSeriesPredictor, ARIMAGARCHModel, EnsembleModel
+    from src.models.rl_models import TD3Agent, SACAgent, TradingEnvironment
+    from src.signals.nlp_signals import NLPSignalGenerator, FinancialNLPAnalyzer
+    from src.portfolio.optimizer import PortfolioOptimizer
+    from src.risk.risk_manager import RiskManager
+    from src.visuals.charting import (
+        create_candlestick_chart, create_technical_chart, create_portfolio_chart,
+        create_risk_dashboard, create_prediction_chart, create_loss_curve,
+        create_feature_importance_chart, create_sentiment_chart, create_efficient_frontier_chart
+    )
+except ImportError as e:
+    st.warning(f"⚠️ Some modules could not be imported: {e}")
+    st.info("Running in demo mode with simulated data")
 
 warnings.filterwarnings('ignore')
 
-# Page configuration
+# PROFESSIONAL BLOOMBERG TERMINAL CONFIGURATION
 st.set_page_config(
-    page_title="MorganVuoksi Terminal",
-    page_icon="📈",
+    page_title="MorganVuoksi Bloomberg Terminal",
+    page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Bloomberg-style theme
-st.markdown("""
+# EXACT BLOOMBERG TERMINAL CSS - INSTITUTIONAL GRADE
+BLOOMBERG_TERMINAL_PROFESSIONAL_CSS = """
 <style>
-    /* Import Google Fonts for professional typography */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    /* CORE BLOOMBERG TERMINAL IMPORTS */
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Courier+New:wght@400;500;600;700&display=swap');
     
-    /* Global styles */
-    * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* EXACT BLOOMBERG TERMINAL VARIABLES */
+    :root {
+        --bloomberg-black: #000000;         /* Pure black terminal background */
+        --bloomberg-panel: #0a0a0a;        /* Dark panel backgrounds */
+        --bloomberg-border: #333333;       /* Professional borders */
+        --bloomberg-text: #ffffff;         /* Pure white text */
+        --bloomberg-muted: #888888;        /* Secondary text */
+        --bloomberg-orange: #ff6b35;       /* Bloomberg signature orange */
+        --bloomberg-cyan: #00d4ff;         /* Primary data color */
+        --bloomberg-green: #00ff88;        /* Bullish indicators */
+        --bloomberg-red: #ff4757;          /* Bearish indicators */
+        --bloomberg-amber: #ffa500;        /* Warnings */
+        --bloomberg-blue: #0088cc;         /* Headers */
     }
     
-    /* Main container */
+    /* GLOBAL BLOOMBERG TERMINAL STYLING */
+    * {
+        font-family: 'JetBrains Mono', 'Courier New', monospace !important;
+    }
+    
     .main {
-        background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
-        color: #e8eaed;
-        padding: 0;
-        margin: 0;
+        background: var(--bloomberg-black) !important;
+        color: var(--bloomberg-text) !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     
     .stApp {
-        background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+        background: var(--bloomberg-black) !important;
     }
     
-    /* Sidebar styling */
+    /* BLOOMBERG TERMINAL HEADER SYSTEM */
+    .terminal-header {
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%);
+        border-bottom: 3px solid var(--bloomberg-orange);
+        padding: 1.5rem 2rem;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.9);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    
+    .terminal-title {
+        color: var(--bloomberg-orange);
+        font-size: 36px;
+        font-weight: 700;
+        text-align: center;
+        margin: 0;
+        text-shadow: 0 3px 10px rgba(255, 107, 53, 0.6);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+    }
+    
+    .terminal-subtitle {
+        color: var(--bloomberg-cyan);
+        font-size: 16px;
+        text-align: center;
+        margin: 12px 0 0 0;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+    
+    .bloomberg-status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 2px solid var(--bloomberg-border);
+    }
+    
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .status-live {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--bloomberg-green);
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.9);
+        animation: bloomberg-pulse 2s infinite;
+    }
+    
+    @keyframes bloomberg-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.2); }
+    }
+    
+    /* PROFESSIONAL SIDEBAR STYLING */
     .stSidebar {
-        background: linear-gradient(180deg, #1e2330 0%, #2a3142 100%);
-        border-right: 1px solid #3a4152;
-        padding: 1rem;
+        background: linear-gradient(180deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%) !important;
+        border-right: 3px solid var(--bloomberg-border) !important;
+        padding: 1rem !important;
     }
     
     .stSidebar .sidebar-content {
-        background: transparent;
+        background: transparent !important;
     }
     
-    /* Input styling */
+    .stSidebar h1, .stSidebar h2, .stSidebar h3 {
+        color: var(--bloomberg-orange) !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        border-bottom: 2px solid var(--bloomberg-orange) !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* ENHANCED INPUT CONTROLS */
     .stTextInput > div > div > input,
     .stSelectbox > div > div > select,
-    .stNumberInput > div > div > input {
-        background: #2a3142 !important;
-        border: 1px solid #3a4152 !important;
-        border-radius: 6px !important;
-        color: #e8eaed !important;
-        font-size: 14px !important;
-        padding: 8px 12px !important;
-        transition: all 0.2s ease;
+    .stNumberInput > div > div > input,
+    .stSlider > div > div > div {
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%) !important;
+        border: 2px solid var(--bloomberg-border) !important;
+        border-radius: 0px !important;
+        color: var(--bloomberg-text) !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 10px 14px !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: 1px !important;
     }
     
     .stTextInput > div > div > input:focus,
     .stSelectbox > div > div > select:focus,
     .stNumberInput > div > div > input:focus {
-        border-color: #0066cc !important;
-        box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2) !important;
+        border-color: var(--bloomberg-cyan) !important;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5) !important;
+        outline: none !important;
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, rgba(0, 212, 255, 0.05) 100%) !important;
     }
     
-    /* Button styling */
+    /* PROFESSIONAL BUTTON SYSTEM */
     .stButton > button {
-        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 6px !important;
-        padding: 10px 20px !important;
-        font-weight: 500 !important;
-        font-size: 14px !important;
-        transition: all 0.2s ease !important;
-        box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2) !important;
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%) !important;
+        color: var(--bloomberg-text) !important;
+        border: 2px solid var(--bloomberg-border) !important;
+        border-radius: 0px !important;
+        padding: 10px 18px !important;
+        font-weight: 700 !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8) !important;
     }
     
     .stButton > button:hover {
-        background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 8px rgba(0, 102, 204, 0.3) !important;
+        background: linear-gradient(135deg, var(--bloomberg-orange) 0%, var(--bloomberg-amber) 100%) !important;
+        color: var(--bloomberg-black) !important;
+        border-color: var(--bloomberg-orange) !important;
+        box-shadow: 0 0 25px rgba(255, 107, 53, 0.7) !important;
+        transform: translateY(-2px) !important;
     }
     
-    /* Tab styling */
+    .stButton > button:active {
+        transform: translateY(0px) !important;
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.5) !important;
+    }
+    
+    /* ENHANCED TAB SYSTEM */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0;
-        background: #1e2330;
-        border-radius: 8px 8px 0 0;
+        background: var(--bloomberg-black);
+        border-bottom: 3px solid var(--bloomberg-border);
         padding: 0;
+        overflow-x: auto;
     }
     
     .stTabs [data-baseweb="tab"] {
-        background: #2a3142;
-        border-radius: 0;
-        color: #a0a3a9;
-        font-weight: 500;
-        padding: 12px 20px;
-        border: none;
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%);
+        border: 2px solid var(--bloomberg-border);
+        border-bottom: none;
+        color: var(--bloomberg-muted);
+        font-weight: 700;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 14px 22px;
+        margin-right: 3px;
         transition: all 0.2s ease;
+        min-width: 120px;
+        text-align: center;
     }
     
     .stTabs [aria-selected="true"] {
-        background: #0066cc;
-        color: white;
-        font-weight: 600;
+        background: linear-gradient(135deg, var(--bloomberg-orange) 0%, var(--bloomberg-amber) 100%) !important;
+        color: var(--bloomberg-black) !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        transform: translateY(-3px);
+        border-color: var(--bloomberg-orange) !important;
+        border-bottom: 3px solid var(--bloomberg-orange) !important;
     }
     
-    .stTabs [data-baseweb="tab"]:hover {
-        background: #3a4152;
-        color: #e8eaed;
+    .stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+        background: linear-gradient(135deg, var(--bloomberg-cyan) 0%, var(--bloomberg-blue) 100%);
+        color: var(--bloomberg-black);
+        border-color: var(--bloomberg-cyan);
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        transform: translateY(-1px);
     }
     
-    /* Metric cards */
+    /* ULTRA-PROFESSIONAL METRIC CARDS */
     .metric-card {
-        background: linear-gradient(135deg, #2a3142 0%, #1e2330 100%);
-        border: 1px solid #3a4152;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s ease;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        border-color: #0066cc;
-    }
-    
-    .metric-card h3 {
-        color: #a0a3a9;
-        font-size: 12px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-card .value {
-        color: #e8eaed;
-        font-size: 24px;
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-    
-    .metric-card .change {
-        font-size: 14px;
-        font-weight: 500;
-    }
-    
-    /* Price changes */
-    .positive-change {
-        color: #00d4aa;
-        background: rgba(0, 212, 170, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
-    
-    .negative-change {
-        color: #ff6b6b;
-        background: rgba(255, 107, 107, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
-    
-    .neutral-change {
-        color: #a0a3a9;
-    }
-    
-    /* Status indicators */
-    .status-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-    }
-    
-    .status-live {
-        background: #00d4aa;
-        box-shadow: 0 0 8px rgba(0, 212, 170, 0.5);
-        animation: pulse 2s infinite;
-    }
-    
-    .status-warning {
-        background: #ffa726;
-        box-shadow: 0 0 8px rgba(255, 167, 38, 0.5);
-    }
-    
-    .status-error {
-        background: #ff6b6b;
-        box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-    
-    /* Data tables */
-    .dataframe {
-        background: #2a3142;
-        border: 1px solid #3a4152;
-        border-radius: 8px;
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%);
+        border: 2px solid var(--bloomberg-border);
+        border-top: 4px solid var(--bloomberg-orange);
+        padding: 2rem;
+        margin: 1rem 0;
+        box-shadow: 
+            0 6px 12px rgba(0, 0, 0, 0.9),
+            inset 0 2px 0 rgba(0, 212, 255, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
         overflow: hidden;
     }
     
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--bloomberg-orange), var(--bloomberg-cyan), var(--bloomberg-orange));
+        z-index: 1;
+        animation: bloomberg-gradient 3s ease-in-out infinite;
+    }
+    
+    @keyframes bloomberg-gradient {
+        0%, 100% { background: linear-gradient(90deg, var(--bloomberg-orange), var(--bloomberg-cyan), var(--bloomberg-orange)); }
+        50% { background: linear-gradient(90deg, var(--bloomberg-cyan), var(--bloomberg-orange), var(--bloomberg-cyan)); }
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 
+            0 12px 24px rgba(0, 0, 0, 0.95),
+            0 0 30px rgba(0, 212, 255, 0.3);
+        border-color: var(--bloomberg-cyan);
+    }
+    
+    .metric-label {
+        color: var(--bloomberg-cyan);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        margin-bottom: 12px;
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+    }
+    
+    .metric-value {
+        color: var(--bloomberg-text);
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        letter-spacing: 2px;
+    }
+    
+    .metric-change {
+        font-size: 13px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 0px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        border: 2px solid;
+    }
+    
+    .metric-change.positive {
+        color: var(--bloomberg-green);
+        background: rgba(0, 255, 136, 0.15);
+        border-color: var(--bloomberg-green);
+        text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+    
+    .metric-change.negative {
+        color: var(--bloomberg-red);
+        background: rgba(255, 71, 87, 0.15);
+        border-color: var(--bloomberg-red);
+        text-shadow: 0 0 10px rgba(255, 71, 87, 0.8);
+        box-shadow: 0 0 15px rgba(255, 71, 87, 0.3);
+    }
+    
+    .metric-change.neutral {
+        color: var(--bloomberg-cyan);
+        background: rgba(0, 212, 255, 0.15);
+        border-color: var(--bloomberg-cyan);
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+    }
+    
+    /* INSTITUTIONAL-GRADE DATA TABLES */
+    .dataframe {
+        background: var(--bloomberg-black) !important;
+        border: 3px solid var(--bloomberg-border) !important;
+        border-radius: 0px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.9) !important;
+    }
+    
     .dataframe th {
-        background: #1e2330;
-        color: #e8eaed;
-        font-weight: 600;
-        padding: 12px;
-        border-bottom: 1px solid #3a4152;
+        background: linear-gradient(135deg, var(--bloomberg-orange) 0%, var(--bloomberg-amber) 100%) !important;
+        color: var(--bloomberg-black) !important;
+        font-weight: 700 !important;
+        padding: 12px 16px !important;
+        border: 1px solid var(--bloomberg-orange) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        font-size: 10px !important;
+        text-align: center !important;
     }
     
     .dataframe td {
-        padding: 10px 12px;
-        border-bottom: 1px solid #3a4152;
-        color: #a0a3a9;
+        padding: 10px 16px !important;
+        border: 1px solid var(--bloomberg-border) !important;
+        color: var(--bloomberg-text) !important;
+        background: var(--bloomberg-panel) !important;
+        font-variant-numeric: tabular-nums !important;
+        text-align: center !important;
+        font-weight: 500 !important;
     }
     
     .dataframe tr:hover {
-        background: #3a4152;
+        background: rgba(0, 212, 255, 0.1) !important;
+        box-shadow: inset 0 0 0 2px var(--bloomberg-cyan);
+        transform: scale(1.01);
+        transition: all 0.2s ease;
     }
     
-    /* Chart containers */
+    .dataframe tr:nth-child(even) td {
+        background: rgba(26, 26, 26, 0.9) !important;
+    }
+    
+    /* PROFESSIONAL CHART STYLING */
     .chart-container {
-        background: #2a3142;
-        border: 1px solid #3a4152;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
+        background: linear-gradient(135deg, var(--bloomberg-panel) 0%, var(--bloomberg-black) 100%);
+        border: 3px solid var(--bloomberg-border);
+        border-top: 4px solid var(--bloomberg-cyan);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        box-shadow: 
+            0 6px 16px rgba(0, 0, 0, 0.9),
+            inset 0 2px 0 rgba(0, 212, 255, 0.1);
+        position: relative;
     }
     
-    /* Header styling */
-    .terminal-header {
-        background: linear-gradient(135deg, #1e2330 0%, #2a3142 100%);
-        border-bottom: 1px solid #3a4152;
-        padding: 1rem 0;
-        margin-bottom: 2rem;
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--bloomberg-cyan), var(--bloomberg-blue));
+        z-index: 1;
     }
     
-    .terminal-title {
-        color: #0066cc;
-        font-size: 28px;
-        font-weight: 700;
-        text-align: center;
-        margin: 0;
-        text-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
-    }
-    
-    .terminal-subtitle {
-        color: #a0a3a9;
-        font-size: 14px;
-        text-align: center;
-        margin: 0.5rem 0 0 0;
-        font-weight: 400;
-    }
-    
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .terminal-title {
-            font-size: 24px;
-        }
-        
-        .metric-card {
-            padding: 1rem;
-        }
-        
-        .metric-card .value {
-            font-size: 20px;
-        }
-    }
-    
-    /* Custom scrollbar */
+    /* ENHANCED SCROLLBARS */
     ::-webkit-scrollbar {
-        width: 8px;
+        width: 10px;
+        height: 10px;
     }
     
     ::-webkit-scrollbar-track {
-        background: #1e2330;
+        background: var(--bloomberg-black);
+        border: 2px solid var(--bloomberg-border);
     }
     
     ::-webkit-scrollbar-thumb {
-        background: #3a4152;
-        border-radius: 4px;
+        background: linear-gradient(135deg, var(--bloomberg-orange) 0%, var(--bloomberg-amber) 100%);
+        border-radius: 0px;
+        border: 1px solid var(--bloomberg-border);
     }
     
     ::-webkit-scrollbar-thumb:hover {
-        background: #4a5568;
+        background: linear-gradient(135deg, var(--bloomberg-cyan) 0%, var(--bloomberg-blue) 100%);
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+    
+    /* PROFESSIONAL LOADING STATES */
+    .loading-spinner {
+        color: var(--bloomberg-cyan);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        animation: bloomberg-pulse 2s infinite;
+    }
+    
+    .loading-dots::after {
+        content: 'LOADING DATA';
+        animation: loading-text 2s infinite;
+    }
+    
+    @keyframes loading-text {
+        0%, 25% { content: 'LOADING DATA.'; }
+        26%, 50% { content: 'LOADING DATA..'; }
+        51%, 75% { content: 'LOADING DATA...'; }
+        76%, 100% { content: 'LOADING DATA'; }
+    }
+    
+    /* PROFESSIONAL SELECTION */
+    ::selection {
+        background: rgba(0, 212, 255, 0.4);
+        color: var(--bloomberg-text);
+    }
+    
+    ::-moz-selection {
+        background: rgba(0, 212, 255, 0.4);
+        color: var(--bloomberg-text);
+    }
+    
+    /* RESPONSIVE DESIGN */
+    @media (max-width: 768px) {
+        .terminal-title {
+            font-size: 28px;
+        }
+        
+        .metric-card {
+            padding: 1.5rem;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+        }
     }
 </style>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(BLOOMBERG_TERMINAL_PROFESSIONAL_CSS, unsafe_allow_html=True)
 
 class MorganVuoksiTerminal:
     """Main terminal application."""
