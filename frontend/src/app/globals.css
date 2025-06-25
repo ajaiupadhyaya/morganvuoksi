@@ -1,212 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Courier+New:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom CSS Variables for Bloomberg-inspired theme */
+/* Import Bloomberg-style fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap');
+
 :root {
-  /* Bloomberg-inspired Color Palette */
-  --bloomberg-black: #0f0f23;
-  --bloomberg-dark: #1a1b3a;
-  --bloomberg-darker: #13142a;
-  --bloomberg-orange: #ff6b1a;
-  --bloomberg-orange-light: #ff8542;
-  --bloomberg-orange-dark: #e55100;
-  --bloomberg-amber: #ffab00;
-  --bloomberg-yellow: #ffd600;
-  --bloomberg-green: #00e676;
-  --bloomberg-green-dark: #00c853;
-  --bloomberg-red: #ff1744;
-  --bloomberg-red-dark: #d50000;
-  --bloomberg-blue: #2196f3;
-  --bloomberg-cyan: #00e5ff;
-  --bloomberg-purple: #7c4dff;
-  --bloomberg-pink: #e91e63;
+  /* Bloomberg Terminal Color Palette */
+  --bloomberg-primary: #0a0e1a;
+  --bloomberg-secondary: #1a1f2e;
+  --bloomberg-tertiary: #2a3142;
+  --bloomberg-surface: #1e2330;
+  --bloomberg-border: #3a4152;
+  --bloomberg-hover: #3a4152;
   
   /* Text Colors */
-  --text-primary: #ffffff;
-  --text-secondary: #b0bec5;
-  --text-muted: #78909c;
-  --text-success: #00e676;
-  --text-danger: #ff1744;
-  --text-warning: #ffab00;
-  --text-info: #00e5ff;
+  --bloomberg-text-primary: #e8eaed;
+  --bloomberg-text-secondary: #a0a3a9;
+  --bloomberg-text-muted: #64748b;
   
-  /* Surface Colors */
-  --surface-primary: #1a1b3a;
-  --surface-secondary: #252659;
-  --surface-tertiary: #2d3071;
-  --surface-elevated: #373a87;
-  --surface-hover: #404399;
+  /* Bloomberg Signature Colors */
+  --bloomberg-blue: #0066cc;
+  --bloomberg-orange: #ff8c42;
+  --bloomberg-terminal-green: #00d4aa;
+  --bloomberg-accent-red: #ff6b6b;
+  --bloomberg-warning: #ffa726;
   
-  /* Border Colors */
-  --border-primary: #404399;
-  --border-secondary: #2d3071;
-  --border-accent: #ff6b1a;
-  
-  /* Shadow Colors */
-  --shadow: rgba(15, 15, 35, 0.5);
-  --shadow-strong: rgba(15, 15, 35, 0.8);
-  
-  /* Fonts */
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
-  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  /* Data-Driven Colors */
+  --gains-color: #00ff00;
+  --losses-color: #ff0000;
+  --neutral-color: #a0a3a9;
 }
 
-/* Base Styles */
 * {
   box-sizing: border-box;
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 html {
-  font-family: var(--font-sans);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: linear-gradient(135deg, var(--bloomberg-black) 0%, var(--bloomberg-dark) 100%);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--bloomberg-primary) 0%, var(--bloomberg-secondary) 100%);
+  color: var(--bloomberg-text-primary);
   min-height: 100vh;
   font-size: 14px;
-  line-height: 1.5;
+  overflow-x: hidden;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bloomberg-darker);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bloomberg-orange);
-  border-radius: 4px;
-  transition: background 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--bloomberg-orange-light);
-}
-
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-}
-
-h1 { font-size: 2.5rem; }
-h2 { font-size: 2rem; }
-h3 { font-size: 1.75rem; }
-h4 { font-size: 1.5rem; }
-h5 { font-size: 1.25rem; }
-h6 { font-size: 1.125rem; }
-
-.text-mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Bloomberg Terminal Components */
-.terminal-container {
-  background: var(--bloomberg-black);
-  border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px var(--shadow-strong);
-}
-
+/* Bloomberg Terminal Header Styles */
 .terminal-header {
-  background: linear-gradient(90deg, var(--bloomberg-dark) 0%, var(--surface-secondary) 100%);
-  border-bottom: 2px solid var(--bloomberg-orange);
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 48px;
+  background: linear-gradient(135deg, var(--bloomberg-surface) 0%, var(--bloomberg-tertiary) 100%);
+  border-bottom: 1px solid var(--bloomberg-border);
+  padding: 12px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .terminal-title {
-  color: var(--bloomberg-orange);
+  color: var(--bloomberg-blue);
+  font-size: 24px;
   font-weight: 700;
-  font-size: 16px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
+  letter-spacing: 1px;
+  font-family: 'Roboto Mono', monospace;
 }
 
 .terminal-subtitle {
-  color: var(--text-secondary);
+  color: var(--bloomberg-text-secondary);
   font-size: 12px;
-  margin-left: 8px;
-}
-
-.terminal-content {
-  background: var(--bloomberg-black);
-  padding: 16px;
-  min-height: 400px;
-}
-
-/* Data Grid Styling */
-.data-grid {
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.data-grid-header {
-  background: var(--surface-secondary);
-  border-bottom: 1px solid var(--bloomberg-orange);
-  padding: 8px 12px;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--bloomberg-orange);
-}
-
-.data-grid-row {
-  border-bottom: 1px solid var(--border-secondary);
-  padding: 8px 12px;
-  transition: background 0.15s ease;
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-
-.data-grid-row:hover {
-  background: var(--surface-hover);
-}
-
-.data-grid-row:last-child {
-  border-bottom: none;
-}
-
-/* Price Styling */
-.price-positive {
-  color: var(--text-success);
-}
-
-.price-negative {
-  color: var(--text-danger);
-}
-
-.price-neutral {
-  color: var(--text-secondary);
-}
-
-/* Chart Container */
-.chart-container {
-  background: var(--bloomberg-darker);
-  border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  padding: 16px;
-  margin: 16px 0;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 /* Status Indicators */
@@ -218,217 +90,818 @@ h6 { font-size: 1.125rem; }
   margin-right: 8px;
 }
 
-.status-online {
-  background: var(--text-success);
-  box-shadow: 0 0 8px var(--text-success);
-}
-
-.status-offline {
-  background: var(--text-danger);
+.status-live {
+  background: var(--bloomberg-terminal-green);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.6);
+  animation: pulse 2s infinite;
 }
 
 .status-warning {
-  background: var(--text-warning);
+  background: var(--bloomberg-warning);
+  box-shadow: 0 0 12px rgba(255, 167, 38, 0.6);
+}
+
+.status-error {
+  background: var(--bloomberg-accent-red);
+  box-shadow: 0 0 12px rgba(255, 107, 107, 0.6);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Price Movement Colors */
+.positive-change {
+  color: var(--gains-color);
+  background: rgba(0, 255, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.negative-change {
+  color: var(--losses-color);
+  background: rgba(255, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.neutral-change {
+  color: var(--neutral-color);
+}
+
+/* Bloomberg Card Styling */
+.bloomberg-card {
+  background: linear-gradient(135deg, var(--bloomberg-tertiary) 0%, var(--bloomberg-surface) 100%);
+  border: 1px solid var(--bloomberg-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.bloomberg-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-color: var(--bloomberg-blue);
+}
+
+.bloomberg-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bloomberg-border);
+}
+
+.bloomberg-card-title {
+  color: var(--bloomberg-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Metric Cards */
+.metric-card {
+  background: linear-gradient(135deg, var(--bloomberg-tertiary) 0%, var(--bloomberg-surface) 100%);
+  border: 1px solid var(--bloomberg-border);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bloomberg-blue) 0%, var(--bloomberg-terminal-green) 100%);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--bloomberg-blue);
+}
+
+.metric-label {
+  color: var(--bloomberg-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.metric-value {
+  color: var(--bloomberg-text-primary);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.metric-change {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Data Tables */
+.bloomberg-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bloomberg-surface);
+  border: 1px solid var(--bloomberg-border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.bloomberg-table th {
+  background: var(--bloomberg-tertiary);
+  color: var(--bloomberg-text-primary);
+  font-weight: 600;
+  padding: 12px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--bloomberg-border);
+}
+
+.bloomberg-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--bloomberg-border);
+  color: var(--bloomberg-text-secondary);
+  font-size: 12px;
+}
+
+.bloomberg-table tbody tr:hover {
+  background: var(--bloomberg-hover);
+  color: var(--bloomberg-text-primary);
+}
+
+.bloomberg-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Chart Containers */
+.chart-container {
+  background: var(--bloomberg-surface);
+  border: 1px solid var(--bloomberg-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  position: relative;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--bloomberg-blue) 0%, transparent 100%);
 }
 
 /* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
+.bloomberg-button {
+  background: linear-gradient(135deg, var(--bloomberg-blue) 0%, #0052a3 100%);
+  color: white;
   border: none;
   border-radius: 6px;
+  padding: 10px 20px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-decoration: none;
-  font-family: inherit;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
+  font-family: 'Roboto Mono', monospace;
 }
 
-.btn-primary {
-  background: var(--bloomberg-orange);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--bloomberg-orange-dark);
+.bloomberg-button:hover {
+  background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
 }
 
-.btn-secondary {
-  background: var(--surface-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-primary);
+.bloomberg-button-secondary {
+  background: var(--bloomberg-tertiary);
+  color: var(--bloomberg-text-primary);
+  border: 1px solid var(--bloomberg-border);
 }
 
-.btn-secondary:hover {
-  background: var(--surface-tertiary);
-  border-color: var(--bloomberg-orange);
+.bloomberg-button-secondary:hover {
+  background: var(--bloomberg-hover);
+  border-color: var(--bloomberg-blue);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-secondary);
-}
-
-.btn-ghost:hover {
-  background: var(--surface-secondary);
-  color: var(--text-primary);
-}
-
-/* Input Fields */
-.input {
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
+/* Input Styling */
+.bloomberg-input {
+  background: var(--bloomberg-tertiary);
+  border: 1px solid var(--bloomberg-border);
   border-radius: 6px;
+  color: var(--bloomberg-text-primary);
   padding: 8px 12px;
-  color: var(--text-primary);
-  font-size: 14px;
+  font-size: 12px;
+  font-family: 'Roboto Mono', monospace;
   transition: all 0.2s ease;
-  font-family: var(--font-mono);
 }
 
-.input:focus {
+.bloomberg-input:focus {
   outline: none;
-  border-color: var(--bloomberg-orange);
-  box-shadow: 0 0 0 2px rgba(255, 107, 26, 0.2);
+  border-color: var(--bloomberg-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
 }
 
-.input::placeholder {
-  color: var(--text-muted);
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* Card Components */
-.card {
-  background: var(--surface-primary);
-  border: 1px solid var(--border-secondary);
-  border-radius: 8px;
-  overflow: hidden;
-  transition: all 0.2s ease;
+::-webkit-scrollbar-track {
+  background: var(--bloomberg-surface);
 }
 
-.card:hover {
-  border-color: var(--bloomberg-orange);
-  box-shadow: 0 4px 20px var(--shadow);
+::-webkit-scrollbar-thumb {
+  background: var(--bloomberg-border);
+  border-radius: 4px;
 }
 
-.card-header {
-  background: var(--surface-secondary);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-secondary);
-  font-weight: 600;
-  color: var(--bloomberg-orange);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bloomberg-hover);
 }
 
-.card-content {
+/* Custom Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Grid Layout */
+.terminal-grid {
+  display: grid;
+  grid-template-columns: 250px 1fr 300px;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  height: calc(100vh - 80px);
   padding: 16px;
 }
 
-/* Navigation */
-.nav-tabs {
+.terminal-sidebar {
+  grid-row: 1 / -1;
+  background: var(--bloomberg-surface);
+  border: 1px solid var(--bloomberg-border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.terminal-main {
   display: flex;
-  background: var(--surface-primary);
-  border-bottom: 2px solid var(--border-secondary);
+  flex-direction: column;
+  gap: 16px;
 }
 
-.nav-tab {
-  padding: 12px 20px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 2px solid transparent;
-  font-weight: 500;
-}
-
-.nav-tab:hover {
-  color: var(--text-primary);
-  background: var(--surface-secondary);
-}
-
-.nav-tab.active {
-  color: var(--bloomberg-orange);
-  border-bottom-color: var(--bloomberg-orange);
-  background: var(--surface-secondary);
-}
-
-/* Utility Classes */
-.text-glow {
-  text-shadow: 0 0 8px currentColor;
-}
-
-.border-glow {
-  box-shadow: 0 0 8px var(--bloomberg-orange);
-}
-
-.glass-effect {
-  backdrop-filter: blur(10px);
-  background: rgba(26, 27, 58, 0.8);
-  border: 1px solid rgba(255, 107, 26, 0.2);
-}
-
-/* Animations */
-@keyframes pulse-orange {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.pulse-orange {
-  animation: pulse-orange 2s infinite;
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.slide-up {
-  animation: slide-up 0.3s ease-out;
+.terminal-aside {
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-  .terminal-header {
-    padding: 8px 12px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .terminal-content {
-    padding: 12px;
-  }
-  
-  .data-grid-row {
-    font-size: 12px;
-    padding: 6px 8px;
+@media (max-width: 1200px) {
+  .terminal-grid {
+    grid-template-columns: 200px 1fr 250px;
   }
 }
 
-/* Print Styles */
-@media print {
-  body {
-    background: white;
-    color: black;
+@media (max-width: 768px) {
+  .terminal-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    height: auto;
   }
   
-  .terminal-container {
-    border: 1px solid #ccc;
-    box-shadow: none;
+  .terminal-sidebar,
+  .terminal-aside {
+    grid-row: auto;
   }
+  
+  .metric-value {
+    font-size: 20px;
+  }
+  
+  .terminal-title {
+    font-size: 20px;
+  }
+}
+
+/* Loading States */
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--bloomberg-surface) 25%, var(--bloomberg-tertiary) 50%, var(--bloomberg-surface) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Error States */
+.error-message {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid var(--bloomberg-accent-red);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--bloomberg-accent-red);
+  font-size: 12px;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Success States */
+.success-message {
+  background: rgba(0, 212, 170, 0.1);
+  border: 1px solid var(--bloomberg-terminal-green);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--bloomberg-terminal-green);
+  font-size: 12px;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* BLOOMBERG TERMINAL - EXACT PROFESSIONAL REPLICATION */
+
+@layer base {
+  :root {
+    /* Core Terminal Colors - Exact Bloomberg Specification */
+    --background: 0 0% 0%;           /* Pure black background */
+    --foreground: 0 0% 100%;         /* Pure white text */
+
+    --card: 0 0% 4%;                 /* Slightly lighter panels */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 180 100% 50%;         /* Bright cyan primary */
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 10%;           /* Dark gray secondary */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 53%;    /* Terminal muted text */
+
+    --accent: 25 100% 50%;           /* Orange accent */
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 100% 50%;       /* Pure red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;              /* Terminal borders */
+    --input: 0 0% 4%;
+    --ring: 180 100% 50%;            /* Cyan focus ring */
+
+    --radius: 0px;                   /* Sharp corners for terminal */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-terminal-bg text-terminal-text antialiased;
+    font-family: 'JetBrains Mono', 'Monaco', 'Consolas', 'Courier New', monospace;
+    background: #000000; /* Pure black terminal background */
+    letter-spacing: 0.025em;
+    line-height: 1.3; /* Tight line height for density */
+  }
+
+  /* Professional Terminal Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-terminal-bg;
+    border: 1px solid #333333;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-terminal-orange;
+    border-radius: 0px; /* Sharp edges */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-terminal-amber;
+  }
+
+  /* Terminal Typography Hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* Professional Financial Data Formatting */
+  .financial-number {
+    @apply font-mono tabular-nums font-semibold;
+    letter-spacing: 0.1em;
+  }
+
+  /* High-Density Data Tables */
+  .data-table {
+    @apply w-full border-collapse;
+    border-spacing: 0;
+  }
+
+  .data-table th {
+    @apply bg-terminal-panel text-terminal-cyan text-xs font-bold uppercase tracking-widest px-2 py-1;
+    border: 1px solid #333333;
+    border-bottom: 2px solid #00d4ff;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  }
+
+  .data-table td {
+    @apply px-2 py-1 text-xs font-mono;
+    border: 1px solid #333333;
+    background: rgba(10, 10, 10, 0.8);
+  }
+
+  .data-table tr:hover {
+    @apply bg-terminal-panel;
+    box-shadow: inset 0 0 0 1px #00d4ff;
+  }
+
+  .data-table tr:nth-child(even) {
+    background: rgba(26, 26, 26, 0.5);
+  }
+
+  /* Enhanced Panel Styling */
+  .terminal-panel {
+    @apply bg-terminal-bg border border-terminal-border;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    box-shadow: 
+      inset 0 1px 0 rgba(0, 212, 255, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Professional Status Indicators */
+  .status-positive {
+    @apply text-terminal-green font-bold;
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+  }
+
+  .status-negative {
+    @apply text-terminal-red font-bold;
+    text-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+  }
+
+  .status-neutral {
+    @apply text-terminal-cyan font-bold;
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+  }
+
+  /* Professional Glow Effects */
+  .glow-orange {
+    box-shadow: 
+      0 0 10px rgba(255, 107, 53, 0.4),
+      0 0 20px rgba(255, 107, 53, 0.2),
+      0 0 40px rgba(255, 107, 53, 0.1);
+  }
+
+  .glow-cyan {
+    box-shadow: 
+      0 0 10px rgba(0, 212, 255, 0.4),
+      0 0 20px rgba(0, 212, 255, 0.2),
+      0 0 40px rgba(0, 212, 255, 0.1);
+  }
+  
+  .glow-green {
+    box-shadow: 
+      0 0 10px rgba(0, 255, 136, 0.4),
+      0 0 20px rgba(0, 255, 136, 0.2);
+  }
+
+  /* Professional Flashing Updates */
+  .flash-update {
+    animation: flash-update 0.3s ease-in-out;
+  }
+
+  @keyframes flash-update {
+    0% { background-color: #00d4ff; color: #000000; }
+    100% { background-color: transparent; }
+  }
+
+  /* Professional Ticker Scrolling */
+  .ticker-scroll {
+    animation: ticker-scroll 30s linear infinite;
+  }
+
+  @keyframes ticker-scroll {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+}
+
+@layer components {
+  /* Enhanced Terminal Buttons */
+  .terminal-button {
+    @apply bg-terminal-panel text-terminal-text border border-terminal-border px-2 py-1 text-xs font-mono font-medium uppercase tracking-wider transition-all duration-150;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  }
+
+  .terminal-button:hover {
+    @apply border-terminal-orange text-terminal-orange;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+  }
+
+  .terminal-button:active {
+    @apply border-terminal-cyan text-terminal-cyan;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Professional Terminal Inputs */
+  .terminal-input {
+    @apply bg-terminal-bg border border-terminal-border text-terminal-text placeholder-terminal-muted px-2 py-1 text-xs font-mono focus:border-terminal-cyan focus:outline-none;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  }
+
+  .terminal-input:focus {
+    box-shadow: 
+      0 0 0 1px #00d4ff,
+      0 0 10px rgba(0, 212, 255, 0.3);
+  }
+
+  /* Professional Tab System */
+  .terminal-tab {
+    @apply bg-terminal-panel border-r border-terminal-border px-3 py-1 text-xs font-mono font-medium uppercase cursor-pointer transition-all duration-150;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  }
+
+  .terminal-tab.active {
+    @apply bg-terminal-orange text-terminal-bg border-b-2 border-terminal-orange;
+    background: linear-gradient(135deg, #ff6b35 0%, #ffa500 100%);
+  }
+
+  .terminal-tab:hover:not(.active) {
+    @apply text-terminal-cyan;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  }
+
+  /* Professional Chart Styling */
+  .terminal-chart {
+    @apply bg-terminal-bg;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+  }
+
+  /* High-Contrast Grid Lines */
+  .chart-grid {
+    stroke: #333333;
+    stroke-width: 0.5;
+    stroke-dasharray: 2,2;
+    opacity: 0.7;
+  }
+
+  /* Professional Command Line */
+  .command-line {
+    @apply bg-terminal-bg border-t border-terminal-border px-2 py-1 font-mono text-xs;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  }
+
+  /* Market Data Ticker */
+  .market-ticker {
+    @apply bg-terminal-panel border-y border-terminal-border py-1 overflow-hidden;
+    background: linear-gradient(90deg, #1a1a1a 0%, #0a0a0a 50%, #1a1a1a 100%);
+  }
+
+  /* Professional Alerts */
+  .terminal-alert {
+    @apply border-l-4 bg-terminal-panel px-3 py-2 text-sm font-mono;
+  }
+
+  .terminal-alert.success {
+    @apply border-terminal-green;
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, #1a1a1a 100%);
+  }
+
+  .terminal-alert.error {
+    @apply border-terminal-red;
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, #1a1a1a 100%);
+  }
+
+  .terminal-alert.warning {
+    @apply border-terminal-orange;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, #1a1a1a 100%);
+  }
+
+  /* Bloomberg Header System */
+  .bloomberg-header {
+    @apply bg-gradient-to-r from-terminal-bg via-terminal-panel to-terminal-bg border-b-2 border-terminal-orange;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  .bloomberg-logo {
+    @apply text-terminal-orange font-mono font-bold text-xl tracking-widest;
+    text-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+  }
+
+  .status-indicator {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-indicator.live {
+    @apply bg-terminal-green;
+    animation: terminal-pulse 2s infinite;
+  }
+
+  .status-indicator.warning {
+    @apply bg-terminal-amber;
+    animation: terminal-pulse 2s infinite;
+  }
+
+  .status-indicator.error {
+    @apply bg-terminal-red;
+    animation: terminal-pulse 2s infinite;
+  }
+
+  /* Professional Metrics Cards */
+  .metric-card {
+    @apply bg-terminal-panel border border-terminal-border p-3;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    box-shadow: 
+      inset 0 1px 0 rgba(0, 212, 255, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  .metric-card:hover {
+    @apply border-terminal-cyan;
+    box-shadow: 
+      inset 0 1px 0 rgba(0, 212, 255, 0.2),
+      0 4px 8px rgba(0, 0, 0, 0.9),
+      0 0 20px rgba(0, 212, 255, 0.1);
+  }
+
+  .metric-label {
+    @apply text-terminal-muted text-xs font-mono font-bold uppercase tracking-wider;
+  }
+
+  .metric-value {
+    @apply text-terminal-text text-xl font-mono font-bold financial-number;
+  }
+
+  .metric-change {
+    @apply text-xs font-mono font-bold;
+  }
+
+  /* Professional Navigation */
+  .nav-item {
+    @apply px-3 py-2 text-xs font-mono font-medium uppercase tracking-wide transition-all duration-150;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+    border: 1px solid #333333;
+  }
+
+  .nav-item:hover {
+    @apply text-terminal-cyan border-terminal-cyan;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+  }
+
+  .nav-item.active {
+    @apply text-terminal-orange border-terminal-orange bg-terminal-orange/10;
+    box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+  }
+}
+
+/* Professional Animation Enhancements */
+@keyframes terminal-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes data-update {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); background-color: #00d4ff; color: #000000; }
+  100% { transform: scale(1); }
+}
+
+.terminal-pulse {
+  animation: terminal-pulse 2s ease-in-out infinite;
+}
+
+.data-update {
+  animation: data-update 0.4s ease-in-out;
+}
+
+/* High-Density Layout Optimizations */
+.dense-layout {
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.ultra-dense {
+  line-height: 1.0;
+  font-size: 10px;
+}
+
+/* Professional Terminal Selection */
+::selection {
+  background: rgba(0, 212, 255, 0.3);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: rgba(0, 212, 255, 0.3);
+  color: #ffffff;
+}
+
+/* Bloomberg Terminal Function Key Indicators */
+.function-key {
+  @apply bg-terminal-border px-2 py-1 text-xs font-mono font-bold;
+  border: 1px solid #333333;
+}
+
+.function-key:hover {
+  @apply bg-terminal-orange text-terminal-bg;
+}
+
+/* Professional Data Visualization */
+.chart-tooltip {
+  @apply bg-terminal-panel border-2 border-terminal-cyan p-2 text-xs font-mono;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+}
+
+.chart-axis {
+  stroke: #333333;
+  stroke-width: 1;
+}
+
+.chart-line {
+  stroke: #00d4ff;
+  stroke-width: 2;
+  fill: none;
+}
+
+.chart-area {
+  fill: url(#priceGradient);
+}
+
+/* Terminal Loading States */
+.loading-dots {
+  @apply text-terminal-cyan;
+}
+
+.loading-dots::after {
+  content: '...';
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0%, 33% { content: '.'; }
+  34%, 66% { content: '..'; }
+  67%, 100% { content: '...'; }
 }

@@ -1,446 +1,410 @@
-# 🚀 MorganVuoksi Elite Terminal
+# 🏛️ MorganVuoksi - Elite Quantitative Trading Platform
 
-**Next-Generation Bloomberg-Grade Quantitative Finance Platform**
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-green.svg)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Ready-red.svg)](https://streamlit.io)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)](https://streamlit.io/)
+**MorganVuoksi** is a professional-grade quantitative trading platform featuring an exact Bloomberg Terminal replica with advanced AI/ML capabilities, institutional-grade risk management, and comprehensive market analysis tools.
 
-## 🌟 **Overview**
+## 🚀 Live Demo
 
-MorganVuoksi Terminal is an elite, AI-supercharged quantitative finance platform that rivals Bloomberg Terminal with modern UX/UI, comprehensive analytics, and cutting-edge machine learning capabilities. Built for institutional-grade trading, research, and portfolio management.
+**[👉 Launch Bloomberg Terminal](https://morganvuoksi.streamlit.app)** *(Replace with your deployed URL)*
 
-<div align="center">
+## ✨ Key Features
 
-### 🎯 **Key Features**
+### 📊 Bloomberg Terminal Replication
+- **Pixel-Perfect Design** - Exact Bloomberg Terminal visual replication
+- **Professional Interface** - Deep black theme with cyan accents
+- **Real-Time Data** - Live market feeds and streaming updates
+- **Terminal Commands** - Bloomberg-style function keys and shortcuts
+- **Multi-Panel Layout** - Institutional trading interface
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 📈 **Real-time Market Data** | Live feeds from Yahoo Finance, Alpaca, Polygon | ✅ Active |
-| 🤖 **AI/ML Predictions** | LSTM, Transformers, XGBoost, Ensemble Models | ✅ Active |
-| 📊 **Portfolio Optimization** | Mean-Variance, Black-Litterman, Risk Parity | ✅ Active |
-| ⚠️ **Risk Management** | VaR, CVaR, Stress Testing, Position Sizing | ✅ Active |
-| 🔄 **Backtesting Engine** | Multi-strategy backtesting with detailed metrics | ✅ Active |
-| 📰 **NLP & Sentiment** | FinBERT, News Analysis, Earnings Processing | ✅ Active |
-| 💰 **Fundamental Analysis** | DCF Valuation, Financial Ratios, Screening | ✅ Active |
-| 🎮 **RL Trading Agents** | TD3/SAC Reinforcement Learning Algorithms | ✅ Active |
-| 📋 **Automated Reporting** | AI-powered market reports and analytics | ✅ Active |
-| 🤖 **LLM Assistant** | GPT-powered trading and research assistant | ✅ Active |
+### 🤖 Advanced AI/ML Stack
+- **Financial LLMs** - FinBERT, BloombergGPT integration
+- **Time Series Models** - LSTM, Transformer, TFT, N-BEATS, DeepAR
+- **Reinforcement Learning** - PPO, TD3, SAC trading agents
+- **Meta-Learning** - MAML for rapid model adaptation
+- **Ensemble Methods** - Combined model predictions
 
-</div>
+### 📈 Market Data & Analytics
+- **Premium Data Sources** - Bloomberg, Refinitiv, Interactive Brokers
+- **Real-Time Feeds** - Polygon.io, IEX Cloud, Alpaca
+- **Alternative Data** - RavenPack news, FRED economic data
+- **Technical Analysis** - 50+ indicators and overlays
+- **Fundamental Analysis** - DCF, LBO, Comps modeling
 
----
+### 🎯 Trading Infrastructure
+- **Order Management** - Interactive Brokers & Alpaca integration
+- **Smart Routing** - TWAP, VWAP, POV algorithms
+- **Risk Management** - VaR, CVaR, stress testing
+- **Portfolio Optimization** - Mean-variance, Black-Litterman
+- **Performance Monitoring** - Real-time P&L tracking
 
-## 🚀 **Quick Start**
+### 🔬 Research Platform
+- **Factor Models** - Fama-French 5-factor implementation
+- **Risk Analytics** - Comprehensive risk metrics
+- **Regime Detection** - Market state identification
+- **Backtesting Engine** - Historical strategy testing
+- **Statistical Analysis** - Cointegration, GARCH models
 
-### **Option 1: One-Click Launch (Recommended)**
+### ⚡ High-Performance Computing
+- **Distributed Computing** - Ray cluster processing
+- **GPU Acceleration** - CUDA-enabled model training
+- **Real-Time Messaging** - ZeroMQ ultra-low latency
+- **Data Pipeline** - Kafka, Redis, InfluxDB stack
+- **Monitoring** - Prometheus & Grafana integration
 
+## 🛠️ Technology Stack
+
+### Backend
+- **Python 3.11+** - Core application
+- **FastAPI** - High-performance API
+- **Redis** - Caching & session management
+- **PostgreSQL** - Primary database
+- **InfluxDB** - Time-series data
+
+### Frontend
+- **Streamlit** - Bloomberg Terminal interface
+- **Next.js** - Modern web application
+- **Plotly.js** - Interactive charts
+- **TailwindCSS** - Professional styling
+
+### AI/ML
+- **PyTorch** - Neural networks
+- **TensorFlow** - Deep learning
+- **Transformers** - Language models
+- **Ray** - Distributed training
+- **Optuna** - Hyperparameter optimization
+
+### Trading
+- **Interactive Brokers** - Professional trading
+- **Alpaca** - Commission-free trading
+- **ccxt** - Cryptocurrency exchanges
+- **ZeroMQ** - Low-latency messaging
+
+## 🚀 Quick Start (5 Minutes)
+
+### Option 1: Streamlit Cloud (Free)
 ```bash
-git clone https://github.com/yourusername/morganvuoksi.git
-cd morganvuoksi
-python enhance_terminal.py
+# 1. Fork this repository
+# 2. Connect to Streamlit Cloud
+# 3. Deploy automatically
 ```
 
-The terminal will automatically:
-- ✅ Check and install dependencies
-- ✅ Setup environment
-- ✅ Launch FastAPI backend (port 8000)
-- ✅ Launch Streamlit terminal (port 8501)
-- ✅ Launch Next.js frontend (port 3000, if available)
-
-### **Option 2: Manual Setup**
-
+### Option 2: Local Development
 ```bash
-# 1. Clone repository
+# Clone repository
 git clone https://github.com/yourusername/morganvuoksi.git
 cd morganvuoksi
 
-# 2. Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch services
-# Terminal 1: Backend API
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Terminal 2: Streamlit Terminal
+# Launch Bloomberg Terminal
 streamlit run dashboard/terminal.py --server.port 8501
-
-# Terminal 3: Next.js Frontend (optional)
-cd frontend && npm install && npm run dev
 ```
 
----
-
-## 🌐 **Access Points**
-
-After startup, access the platform through:
-
-| Interface | URL | Description |
-|-----------|-----|-------------|
-| 🖥️ **Main Terminal** | [http://localhost:8501](http://localhost:8501) | Bloomberg-style Streamlit interface |
-| 🔧 **API Backend** | [http://localhost:8000](http://localhost:8000) | FastAPI server with documentation |
-| 🌐 **Modern Frontend** | [http://localhost:3000](http://localhost:3000) | Next.js/React interface (if available) |
-| 📚 **API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive API documentation |
-
----
-
-## 📊 **Core Modules**
-
-### **1. Market Data & Analysis**
-- **Real-time Feeds**: Yahoo Finance, Alpaca, Polygon integration
-- **Technical Indicators**: RSI, MACD, Bollinger Bands, Moving Averages
-- **Interactive Charts**: Professional candlestick charts with volume overlays
-- **Multi-timeframe**: 1D, 5D, 1M, 3M, 1Y data views
-
-### **2. AI/ML Predictions**
-- **Models Available**: LSTM, Transformer, XGBoost, Ensemble
-- **Prediction Horizons**: 1-30 days ahead
-- **Confidence Intervals**: Statistical confidence bands
-- **Model Performance**: Real-time accuracy tracking
-
-### **3. Portfolio Optimization**
-- **Strategies**: Mean-Variance, Black-Litterman, Risk Parity, Maximum Sharpe
-- **Risk Tolerance**: Conservative, Moderate, Aggressive settings
-- **Efficient Frontier**: Interactive risk-return visualization
-- **Constraints**: Position limits, sector exposure, leverage controls
-
-### **4. Risk Management**
-- **VaR Calculations**: Historical, Parametric, Monte Carlo methods
-- **Stress Testing**: Market crash, recession, volatility spike scenarios
-- **Position Sizing**: Kelly Criterion and risk-based approaches
-- **Real-time Monitoring**: Automated risk limit alerts
-
-### **5. Backtesting Engine**
-- **Strategies**: Momentum, Mean Reversion, Breakout, RSI-based
-- **Performance Metrics**: Sharpe ratio, maximum drawdown, win rate
-- **Trade Analysis**: Detailed trade-by-trade examination
-- **Custom Strategies**: User-defined trading logic
-
-### **6. NLP & Sentiment Analysis**
-- **Models**: FinBERT, Twitter-RoBERTa, TextBlob
-- **News Sources**: Multiple financial news APIs
-- **Sentiment Signals**: Real-time sentiment-based trading signals
-- **Earnings Analysis**: Automated earnings call processing
-
-### **7. Fundamental Analysis**
-- **DCF Valuation**: Comprehensive discounted cash flow models
-- **Financial Ratios**: P/E, P/B, ROE, debt metrics
-- **Screening**: Custom stock screening tools
-- **Sector Analysis**: Industry-wide comparisons
-
-### **8. Reinforcement Learning**
-- **Algorithms**: TD3 (Twin Delayed DDPG), SAC (Soft Actor-Critic)
-- **Training Environment**: Realistic market simulation
-- **Agent Performance**: Live training progress visualization
-- **Strategy Deployment**: Trained agent strategy execution
-
----
-
-## 🔧 **API Endpoints**
-
-### **Market Data**
-```http
-GET /api/v1/terminal_data/{symbol}
-GET /api/v1/terminal_data  # Default AAPL
-```
-
-### **AI Predictions**
-```http
-POST /api/v1/predictions
-Content-Type: application/json
-{
-  "symbol": "AAPL",
-  "model_type": "ensemble",
-  "horizon_days": 30,
-  "confidence_interval": 0.95
-}
-```
-
-### **Portfolio Optimization**
-```http
-POST /api/v1/portfolio/optimize
-Content-Type: application/json
-{
-  "symbols": ["AAPL", "GOOGL", "MSFT"],
-  "method": "mean_variance",
-  "risk_tolerance": "moderate",
-  "initial_capital": 100000
-}
-```
-
-### **Risk Analysis**
-```http
-POST /api/v1/risk/analyze
-Content-Type: application/json
-{
-  "symbols": ["AAPL", "GOOGL"],
-  "weights": [0.6, 0.4],
-  "confidence_level": 0.95
-}
-```
-
-### **DCF Valuation**
-```http
-GET /api/v1/dcf/{symbol}
-```
-
-### **Sentiment Analysis**
-```http
-GET /api/v1/sentiment/{symbol}?days_back=7
-```
-
----
-
-## ⚙️ **Configuration**
-
-### **Environment Variables**
-Create a `.env` file in the project root:
-
+### Option 3: Docker Deployment
 ```bash
+# Build and run
+docker-compose up -d
+
+# Access at http://localhost:8501
+```
+
+## 🌐 Free/Cheap Hosting Options
+
+### 1. Streamlit Cloud (100% FREE)
+**Cost:** $0/month
+**Features:** Perfect for Bloomberg Terminal
+```bash
+# Steps:
+1. Fork repository to GitHub
+2. Go to share.streamlit.io
+3. Connect GitHub account
+4. Deploy dashboard/terminal.py
+5. Live in 2 minutes!
+```
+
+### 2. Railway (Generous Free Tier)
+**Cost:** $0-5/month
+**Features:** Full-stack with databases
+```bash
+# Deploy with one click
+railway login
+railway deploy
+```
+
+### 3. Render (Free Web Services)
+**Cost:** $0-7/month
+**Features:** Auto-deploy from GitHub
+```bash
+# Connect GitHub repo
+# Auto-deploy on push
+# Free tier: 750 hours/month
+```
+
+### 4. Heroku (Hobby Tier)
+**Cost:** $7/month
+**Features:** Professional hosting
+```bash
+# Deploy via Git
+git push heroku main
+```
+
+### 5. DigitalOcean App Platform
+**Cost:** $5/month
+**Features:** Container hosting
+```bash
+# Deploy via GitHub integration
+# Auto-scaling available
+```
+
+### 6. AWS/GCP Free Tier
+**Cost:** $0-10/month (12 months free)
+**Features:** Enterprise-grade hosting
+
+## 📦 Deployment Instructions
+
+### Streamlit Cloud (Recommended for Demo)
+
+1. **Fork Repository**
+   ```bash
+   # Fork this repo to your GitHub account
+   ```
+
+2. **Deploy to Streamlit Cloud**
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Click "New app"
+   - Choose your fork
+   - Set main file: `dashboard/terminal.py`
+   - Click "Deploy"
+
+3. **Configure Secrets**
+   - Add API keys in Streamlit Cloud settings
+   - Use `.streamlit/secrets.toml` format
+
+### Railway Deployment
+
+1. **Connect Repository**
+   ```bash
+   # Connect GitHub repo to Railway
+   ```
+
+2. **Configure Environment**
+   ```bash
+   # Set environment variables
+   STREAMLIT_SERVER_PORT=8501
+   STREAMLIT_SERVER_ADDRESS=0.0.0.0
+   ```
+
+3. **Deploy**
+   ```bash
+   # Automatic deployment on push
+   ```
+
+### Docker Deployment
+
+1. **Build Image**
+   ```bash
+   docker build -t morganvuoksi .
+   ```
+
+2. **Run Container**
+   ```bash
+   docker run -p 8501:8501 morganvuoksi
+   ```
+
+3. **Use Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+## 🔧 Configuration
+
+### Environment Variables
+Create `.env` file:
+```env
 # Trading APIs
 ALPACA_API_KEY=your_alpaca_key
 ALPACA_SECRET_KEY=your_alpaca_secret
-POLYGON_API_KEY=your_polygon_key
+IB_ACCOUNT=your_ib_account
 
-# Economic Data
+# Data APIs
+POLYGON_API_KEY=your_polygon_key
+BLOOMBERG_API_KEY=your_bloomberg_key
 FRED_API_KEY=your_fred_key
 
-# AI & NLP
-OPENAI_API_KEY=your_openai_key
-
-# News & Sentiment
-NEWS_API_KEY=your_newsapi_key
-ALPHA_VANTAGE_API_KEY=your_alphavantage_key
-
-# Database (Optional)
+# Database
+DATABASE_URL=postgresql://user:pass@localhost/db
 REDIS_URL=redis://localhost:6379
-DATABASE_URL=postgresql://user:pass@localhost/morganvuoksi
+
+# Optional: AI/ML
+OPENAI_API_KEY=your_openai_key
+HUGGINGFACE_API_KEY=your_hf_key
 ```
 
-### **Configuration File**
-Edit `config/config.yaml`:
-
-```yaml
-# Risk Management
-risk_management:
-  max_position_size: 0.1
-  max_portfolio_risk: 0.02
-  stop_loss_pct: 0.05
-  var_confidence_level: 0.95
-
-# AI Models
-ai_models:
-  default_model: "ensemble"
-  training_episodes: 100
-  prediction_horizon: "30d"
-
-# Portfolio Optimization
-portfolio:
-  optimization_method: "mean_variance"
-  risk_tolerance: "moderate"
-  rebalance_frequency: "monthly"
+### Streamlit Secrets
+Create `.streamlit/secrets.toml`:
+```toml
+[api_keys]
+alpaca_api_key = "your_key"
+alpaca_secret_key = "your_secret"
+polygon_api_key = "your_key"
+fred_api_key = "your_key"
 ```
 
----
+## 📊 Features Overview
 
-## 🧠 **AI & Machine Learning Stack**
+### Terminal Interface
+- **Real-Time Market Data** - Live price feeds
+- **Interactive Charts** - Professional candlestick charts
+- **Technical Indicators** - RSI, MACD, Bollinger Bands
+- **Options Chain** - Real-time options data
+- **Portfolio Tracking** - Live P&L monitoring
 
-### **Prediction Models**
-- **LSTM Networks**: Deep learning for time series prediction
-- **Transformers**: Attention-based models for complex patterns
-- **XGBoost**: Gradient boosting for feature-rich predictions
-- **Ensemble Methods**: Combined model predictions
+### AI/ML Models
+- **Price Prediction** - LSTM, Transformer models
+- **Sentiment Analysis** - News and social media
+- **Risk Management** - VaR, stress testing
+- **Portfolio Optimization** - Modern portfolio theory
+- **Algorithmic Trading** - Reinforcement learning
 
-### **Reinforcement Learning**
-- **TD3**: Twin Delayed Deep Deterministic Policy Gradient
-- **SAC**: Soft Actor-Critic for robust training
-- **Custom Environments**: Realistic trading simulations
+### Data Sources
+- **Market Data** - Yahoo Finance, Alpaca, Polygon
+- **Economic Data** - FRED, World Bank
+- **News Data** - NewsAPI, RSS feeds
+- **Social Data** - Twitter, Reddit sentiment
+- **Fundamental Data** - Company financials
 
-### **NLP & Sentiment**
-- **FinBERT**: Financial domain-specific BERT model
-- **News Processing**: Real-time news sentiment analysis
-- **Earnings Analysis**: Automated earnings call processing
+## 🔐 Security
 
----
+### API Key Management
+- Environment variables only
+- Never commit keys to Git
+- Use secrets management
+- Rotate keys regularly
 
-## 🎨 **User Interface**
+### Data Protection
+- Encrypted data transmission
+- Secure API endpoints
+- User authentication
+- Rate limiting
 
-### **Bloomberg-Style Design**
-- **Professional Color Scheme**: Deep blues, greens, and dark backgrounds
-- **Modern Typography**: Inter font family for readability
-- **Interactive Charts**: Plotly-powered visualizations
-- **Responsive Layout**: Works on desktop, tablet, and mobile
+## 🧪 Testing
 
-### **Key UI Features**
-- **Live Data Indicators**: Real-time status indicators
-- **Professional Metrics Cards**: Bloomberg-style data presentation
-- **Advanced Charting**: Candlestick charts with technical overlays
-- **Interactive Dashboards**: Drag-and-drop layout customization
-
----
-
-## 🔍 **Example Usage**
-
-### **1. Analyze a Stock**
-```python
-# Access via Streamlit UI
-1. Enter symbol: AAPL
-2. Select timeframe: 1Y
-3. View technical indicators
-4. Generate AI predictions
-```
-
-### **2. Optimize Portfolio**
-```python
-# Via API
-import requests
-
-response = requests.post('http://localhost:8000/api/v1/portfolio/optimize', 
-    json={
-        "symbols": ["AAPL", "GOOGL", "MSFT", "TSLA"],
-        "method": "mean_variance",
-        "risk_tolerance": "moderate"
-    }
-)
-```
-
-### **3. Risk Analysis**
-```python
-# Via API
-response = requests.post('http://localhost:8000/api/v1/risk/analyze',
-    json={
-        "symbols": ["AAPL", "GOOGL"],
-        "weights": [0.6, 0.4]
-    }
-)
-```
-
----
-
-## 📈 **Performance & Scalability**
-
-### **Optimization Features**
-- **Data Caching**: Redis-based caching for fast access
-- **Async Processing**: FastAPI async endpoints
-- **Background Tasks**: Celery task queue for heavy computations
-- **Database Integration**: PostgreSQL for data persistence
-
-### **Monitoring**
-- **Health Checks**: Built-in system health monitoring
-- **Performance Metrics**: Request timing and resource usage
-- **Error Tracking**: Comprehensive error logging
-- **API Rate Limiting**: Intelligent request throttling
-
----
-
-## 🧪 **Testing & Quality**
-
-### **Test Coverage**
+### Run Tests
 ```bash
-# Run all tests
-pytest tests/ -v --cov=src
-
-# Run specific test categories
-pytest tests/test_ml_models.py -v
-pytest tests/test_portfolio.py -v
-pytest tests/test_risk.py -v
-```
-
-### **Code Quality**
-```bash
-# Format code
-black src/ tests/
-
-# Lint code
-flake8 src/ tests/
-
-# Type checking
-mypy src/
-```
-
----
-
-## 📚 **Documentation**
-
-### **Comprehensive Guides**
-- [📖 **User Guide**](TERMINAL_GUIDE.md) - Complete usage instructions
-- [🏗️ **System Architecture**](SYSTEM_ARCHITECTURE.md) - Technical architecture
-- [🔧 **API Reference**](API_CREDENTIALS.md) - Complete API documentation
-- [🤖 **ML Models**](ML_MODELS.md) - Machine learning implementation
-- [⚠️ **Risk Management**](RISK_MANAGEMENT.md) - Risk system details
-- [📊 **Portfolio Optimization**](PORTFOLIO_OPTIMIZATION.md) - Portfolio strategies
-
----
-
-## 🛡️ **Security & Compliance**
-
-### **Security Features**
-- **API Key Management**: Secure credential storage
-- **Rate Limiting**: DDoS protection and fair usage
-- **Data Encryption**: Encrypted data transmission
-- **Access Controls**: Role-based access management
-
-### **Compliance**
-- **Data Privacy**: GDPR and CCPA compliant
-- **Financial Regulations**: SEC and FINRA considerations
-- **Audit Trail**: Comprehensive transaction logging
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### **Development Setup**
-```bash
-# 1. Fork and clone
-git clone https://github.com/yourusername/morganvuoksi.git
-
-# 2. Create feature branch
-git checkout -b feature/amazing-feature
-
-# 3. Install dev dependencies
-pip install -r requirements-dev.txt
-
-# 4. Make changes and test
+# Unit tests
 pytest tests/
 
-# 5. Submit pull request
+# Integration tests
+pytest tests/integration/
+
+# Performance tests
+pytest tests/performance/
 ```
 
----
+### Manual Testing
+```bash
+# Test Bloomberg Terminal
+streamlit run dashboard/terminal.py
 
-## 📄 **License**
+# Test API endpoints
+python -m pytest tests/api/
+
+# Test models
+python -m pytest tests/models/
+```
+
+## 📈 Performance
+
+### Optimization Features
+- **Caching** - Redis for fast data access
+- **Async Processing** - Non-blocking operations
+- **Vectorized Calculations** - NumPy optimization
+- **GPU Acceleration** - CUDA support
+- **Connection Pooling** - Database optimization
+
+### Monitoring
+- **Prometheus Metrics** - System monitoring
+- **Health Checks** - Service availability
+- **Performance Tracking** - Response times
+- **Error Tracking** - Exception monitoring
+
+## 🤝 Contributing
+
+### Development Setup
+```bash
+# Clone repository
+git clone https://github.com/yourusername/morganvuoksi.git
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest
+```
+
+### Code Style
+- **Black** - Code formatting
+- **Flake8** - Linting
+- **isort** - Import sorting
+- **Type hints** - Full typing support
+
+## 📚 Documentation
+
+- **[API Documentation](docs/api.md)** - REST API reference
+- **[Model Documentation](docs/models.md)** - AI/ML models
+- **[Trading Guide](docs/trading.md)** - Trading strategies
+- **[Data Sources](docs/data.md)** - Market data providers
+- **[Deployment Guide](DEPLOYMENT.md)** - Detailed deployment
+
+## 🆘 Support
+
+### Common Issues
+- **Installation Problems** - Check Python version (3.11+)
+- **API Errors** - Verify API keys and quotas
+- **Performance Issues** - Enable caching and GPU
+- **Deployment Issues** - Check environment variables
+
+### Get Help
+- **GitHub Issues** - Bug reports and feature requests
+- **Discussions** - Community support
+- **Email** - support@morganvuoksi.com
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 🙏 Acknowledgments
+
+- **Bloomberg Terminal** - Design inspiration
+- **Interactive Brokers** - Trading infrastructure
+- **Streamlit** - Amazing framework
+- **Open Source Community** - Incredible libraries
+
+## 🚀 What's Next?
+
+### Roadmap
+- [ ] Real-time WebSocket feeds
+- [ ] Mobile application
+- [ ] Advanced ML models
+- [ ] Multi-asset support
+- [ ] Social trading features
+
+### Version History
+- **v1.0.0** - Initial release with Bloomberg Terminal
+- **v0.9.0** - Beta testing phase
+- **v0.8.0** - Core functionality complete
+
 ---
 
-## ⚠️ **Disclaimer**
-
-This software is for educational and research purposes only. It is not intended as investment advice. Always conduct your own research and consider consulting with a financial advisor before making investment decisions.
-
----
-
-## 🆘 **Support**
-
-- **Documentation**: Check the `/docs` directory
-- **Issues**: [GitHub Issues](https://github.com/yourusername/morganvuoksi/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/morganvuoksi/discussions)
-- **Email**: support@morganvuoksi.com
-
----
-
-<div align="center">
-
-**🚀 MorganVuoksi Elite Terminal** - *Professional-grade quantitative trading platform for the modern trader*
-
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/morganvuoksi.svg?style=social&label=Star)](https://github.com/yourusername/morganvuoksi)
-[![Follow](https://img.shields.io/twitter/follow/morganvuoksi?style=social)](https://twitter.com/morganvuoksi)
-
-</div>
+**⚡ Ready to trade like a pro? [Deploy now](https://share.streamlit.io) and start analyzing markets with institutional-grade tools!**
