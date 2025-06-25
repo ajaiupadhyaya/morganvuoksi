@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MorganVuoksi Elite Terminal - Web Deployment Version
-Bloomberg-grade quantitative finance terminal optimized for Streamlit Cloud.
+MorganVuoksi Elite Terminal - Bloomberg-Grade Professional Interface
+Complete Bloomberg Terminal replication with exact visual fidelity.
 """
 
 import streamlit as st
@@ -27,98 +27,234 @@ warnings.filterwarnings('ignore')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Page configuration - MUST be first Streamlit command
+# PROFESSIONAL BLOOMBERG TERMINAL CONFIGURATION
 st.set_page_config(
-    page_title="MorganVuoksi Elite Terminal",
-    page_icon="📈",
+    page_title="MorganVuoksi Bloomberg Terminal",
+    page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Get Help': 'https://github.com/yourusername/morganvuoksi',
-        'Report a bug': 'https://github.com/yourusername/morganvuoksi/issues',
-        'About': "MorganVuoksi Elite Terminal - Bloomberg-Grade Quantitative Finance Platform"
+        'Get Help': 'https://github.com/morganvuoksi/terminal',
+        'Report a bug': 'https://github.com/morganvuoksi/terminal/issues',
+        'About': "Bloomberg-Grade Quantitative Trading Terminal"
     }
 )
 
-# Bloomberg-style CSS
-BLOOMBERG_CSS = """
+# EXACT BLOOMBERG TERMINAL CSS - PROFESSIONAL REPLICATION
+BLOOMBERG_TERMINAL_CSS = """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    /* CORE TERMINAL IMPORTS */
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Courier+New:wght@400;500;600;700&display=swap');
     
-    /* Global styles */
-    .stApp {
-        background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
-        color: #e8eaed;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* TERMINAL ROOT VARIABLES - EXACT BLOOMBERG SPECIFICATION */
+    :root {
+        --terminal-black: #000000;           /* Pure black background */
+        --terminal-panel: #0a0a0a;          /* Slightly lighter panels */
+        --terminal-border: #333333;         /* Professional gray borders */
+        --terminal-text: #ffffff;           /* Pure white text */
+        --terminal-muted: #888888;          /* Muted secondary text */
+        --terminal-orange: #ff6b35;         /* Bloomberg signature orange */
+        --terminal-cyan: #00d4ff;           /* Bright cyan for data */
+        --terminal-green: #00ff88;          /* Bullish values */
+        --terminal-red: #ff4757;            /* Bearish values */
+        --terminal-amber: #ffa500;          /* Warnings and highlights */
+        --terminal-blue: #0088cc;           /* Professional blue */
     }
     
-    /* Header styling */
-    .terminal-header {
-        background: linear-gradient(135deg, #1e2330 0%, #2a3142 100%);
-        border: 1px solid #3a4152;
-        border-radius: 12px;
-        padding: 24px;
-        margin: -1rem -1rem 2rem -1rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    /* GLOBAL TERMINAL STYLING */
+    .stApp {
+        background: var(--terminal-black) !important;
+        color: var(--terminal-text) !important;
+        font-family: 'JetBrains Mono', 'Courier New', monospace !important;
+    }
+    
+    .main {
+        background: var(--terminal-black) !important;
+        color: var(--terminal-text) !important;
+        padding: 0 !important;
+    }
+    
+    /* BLOOMBERG TERMINAL HEADER */
+    .bloomberg-terminal-header {
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%);
+        border-bottom: 3px solid var(--terminal-orange);
+        padding: 1rem 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
     }
     
     .terminal-title {
-        color: #00d4aa;
-        font-size: 28px;
+        color: var(--terminal-orange);
+        font-size: 32px;
         font-weight: 700;
         text-align: center;
         margin: 0;
-        text-shadow: 0 2px 8px rgba(0, 212, 170, 0.3);
-        letter-spacing: 1px;
+        text-shadow: 0 2px 8px rgba(255, 107, 53, 0.5);
+        letter-spacing: 2px;
+        font-family: 'JetBrains Mono', monospace;
     }
     
     .terminal-subtitle {
-        color: #a0a3a9;
+        color: var(--terminal-cyan);
         font-size: 14px;
         text-align: center;
         margin: 8px 0 0 0;
-        font-weight: 400;
+        font-weight: 500;
+        letter-spacing: 1px;
+        font-family: 'JetBrains Mono', monospace;
     }
     
-    .status-bar {
+    .bloomberg-status-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid #3a4152;
+        padding-top: 12px;
+        border-top: 1px solid var(--terminal-border);
+        font-size: 12px;
+        font-family: 'JetBrains Mono', monospace;
     }
     
     .status-indicator {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
     }
     
     .status-live {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #00d4aa;
-        box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
-        animation: pulse 2s infinite;
+        background: var(--terminal-green);
+        box-shadow: 0 0 12px rgba(0, 255, 136, 0.8);
+        animation: terminal-pulse 2s infinite;
     }
     
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+    @keyframes terminal-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.1); }
     }
     
-    /* Metric cards */
+    /* PROFESSIONAL SIDEBAR */
+    .stSidebar {
+        background: linear-gradient(180deg, var(--terminal-panel) 0%, var(--terminal-black) 100%) !important;
+        border-right: 2px solid var(--terminal-border) !important;
+    }
+    
+    .stSidebar .sidebar-content {
+        background: transparent !important;
+    }
+    
+    .stSidebar h1, .stSidebar h2, .stSidebar h3 {
+        color: var(--terminal-orange) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 700;
+    }
+    
+    /* PROFESSIONAL INPUT CONTROLS */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div > select,
+    .stNumberInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%) !important;
+        border: 2px solid var(--terminal-border) !important;
+        border-radius: 0px !important;
+        color: var(--terminal-text) !important;
+        font-size: 12px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 500 !important;
+        padding: 8px 12px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus,
+    .stNumberInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--terminal-cyan) !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4) !important;
+        outline: none !important;
+    }
+    
+    /* PROFESSIONAL BUTTONS */
+    .stButton > button {
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%) !important;
+        color: var(--terminal-text) !important;
+        border: 2px solid var(--terminal-border) !important;
+        border-radius: 0px !important;
+        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        transition: all 0.15s ease !important;
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(135deg, var(--terminal-orange) 0%, var(--terminal-amber) 100%) !important;
+        color: var(--terminal-black) !important;
+        border-color: var(--terminal-orange) !important;
+        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6) !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    /* PROFESSIONAL TAB SYSTEM */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background: var(--terminal-black);
+        border-bottom: 2px solid var(--terminal-border);
+        padding: 0;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%);
+        border: 2px solid var(--terminal-border);
+        border-bottom: none;
+        color: var(--terminal-muted);
+        font-weight: 600;
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 12px 20px;
+        margin-right: 2px;
+        transition: all 0.2s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, var(--terminal-orange) 0%, var(--terminal-amber) 100%) !important;
+        color: var(--terminal-black) !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+        transform: translateY(-2px);
+        border-color: var(--terminal-orange) !important;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+        background: linear-gradient(135deg, var(--terminal-cyan) 0%, var(--terminal-blue) 100%);
+        color: var(--terminal-black);
+        border-color: var(--terminal-cyan);
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    }
+    
+    /* PROFESSIONAL METRIC CARDS */
     .metric-card {
-        background: linear-gradient(135deg, #2a3142 0%, #1e2330 100%);
-        border: 1px solid #3a4152;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 8px 0;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%);
+        border: 2px solid var(--terminal-border);
+        border-top: 3px solid var(--terminal-orange);
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.8),
+            inset 0 1px 0 rgba(0, 212, 255, 0.1);
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
@@ -127,171 +263,236 @@ BLOOMBERG_CSS = """
     .metric-card::before {
         content: '';
         position: absolute;
-        top: 0;
+        top: -2px;
         left: 0;
         right: 0;
         height: 3px;
-        background: linear-gradient(90deg, #00d4aa, #0066cc);
+        background: linear-gradient(90deg, var(--terminal-orange), var(--terminal-cyan));
+        z-index: 1;
     }
     
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        border-color: #00d4aa;
+        transform: translateY(-3px);
+        box-shadow: 
+            0 8px 16px rgba(0, 0, 0, 0.9),
+            0 0 20px rgba(0, 212, 255, 0.2);
+        border-color: var(--terminal-cyan);
     }
     
     .metric-label {
-        color: #a0a3a9;
-        font-size: 11px;
-        font-weight: 600;
+        color: var(--terminal-cyan);
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
         margin-bottom: 8px;
+        font-family: 'JetBrains Mono', monospace;
     }
     
     .metric-value {
-        color: #e8eaed;
-        font-size: 24px;
+        color: var(--terminal-text);
+        font-size: 28px;
         font-weight: 700;
         margin-bottom: 4px;
         font-family: 'JetBrains Mono', monospace;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
     }
     
     .metric-change {
         font-size: 12px;
-        font-weight: 500;
-        padding: 2px 6px;
-        border-radius: 4px;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 4px 8px;
+        border-radius: 0px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
     .metric-change.positive {
-        color: #00d4aa;
-        background: rgba(0, 212, 170, 0.1);
+        color: var(--terminal-green);
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid var(--terminal-green);
+        text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
     }
     
     .metric-change.negative {
-        color: #ff6b6b;
-        background: rgba(255, 107, 107, 0.1);
+        color: var(--terminal-red);
+        background: rgba(255, 71, 87, 0.1);
+        border: 1px solid var(--terminal-red);
+        text-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
     }
     
     .metric-change.neutral {
-        color: #a0a3a9;
-        background: rgba(160, 163, 169, 0.1);
+        color: var(--terminal-cyan);
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px solid var(--terminal-cyan);
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
     }
     
-    /* Sidebar styling */
-    .stSidebar {
-        background: linear-gradient(180deg, #1e2330 0%, #2a3142 100%);
-        border-right: 1px solid #3a4152;
-    }
-    
-    /* Button styling */
-    .stButton > button {
-        background: linear-gradient(135deg, #0066cc 0%, #00d4aa 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 102, 204, 0.4);
-    }
-    
-    /* Input styling */
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div > select,
-    .stNumberInput > div > div > input {
-        background: #2a3142;
-        border: 1px solid #3a4152;
-        border-radius: 8px;
-        color: #e8eaed;
-        font-size: 14px;
-        padding: 12px;
-        transition: all 0.2s ease;
-    }
-    
-    /* Tabs styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background: #1e2330;
-        border-radius: 12px 12px 0 0;
-        border: 1px solid #3a4152;
-        border-bottom: none;
-        padding: 8px;
-        gap: 4px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: #a0a3a9;
-        font-weight: 500;
-        font-size: 14px;
-        padding: 12px 20px;
-        border-radius: 8px;
-        border: none;
-        transition: all 0.2s ease;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #00d4aa, #0066cc);
-        color: white;
-        font-weight: 600;
-        box-shadow: 0 2px 8px rgba(0, 212, 170, 0.3);
-    }
-    
-    /* Tab content */
-    .stTabs [data-baseweb="tab-panel"] {
-        background: #2a3142;
-        border: 1px solid #3a4152;
-        border-radius: 0 0 12px 12px;
-        padding: 24px;
-        min-height: 600px;
-    }
-    
-    /* Data tables */
+    /* HIGH-DENSITY DATA TABLES */
     .dataframe {
-        background: #2a3142;
-        border: 1px solid #3a4152;
-        border-radius: 12px;
-        overflow: hidden;
-        font-family: 'JetBrains Mono', monospace;
+        background: var(--terminal-black) !important;
+        border: 2px solid var(--terminal-border) !important;
+        border-radius: 0px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
     }
     
-    /* Scrollbar */
+    .dataframe th {
+        background: linear-gradient(135deg, var(--terminal-orange) 0%, var(--terminal-amber) 100%) !important;
+        color: var(--terminal-black) !important;
+        font-weight: 700 !important;
+        padding: 8px 12px !important;
+        border: 1px solid var(--terminal-orange) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        font-size: 10px !important;
+    }
+    
+    .dataframe td {
+        padding: 6px 12px !important;
+        border: 1px solid var(--terminal-border) !important;
+        color: var(--terminal-text) !important;
+        background: var(--terminal-panel) !important;
+        font-variant-numeric: tabular-nums !important;
+    }
+    
+    .dataframe tr:hover {
+        background: rgba(0, 212, 255, 0.1) !important;
+        box-shadow: inset 0 0 0 1px var(--terminal-cyan);
+    }
+    
+    .dataframe tr:nth-child(even) td {
+        background: rgba(26, 26, 26, 0.8) !important;
+    }
+    
+    /* PROFESSIONAL CHART CONTAINERS */
+    .chart-container {
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%);
+        border: 2px solid var(--terminal-border);
+        border-top: 3px solid var(--terminal-cyan);
+        padding: 1rem;
+        margin: 1rem 0;
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.8),
+            inset 0 1px 0 rgba(0, 212, 255, 0.1);
+    }
+    
+    /* PROFESSIONAL SCROLLBARS */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
     }
     
     ::-webkit-scrollbar-track {
-        background: #1e2330;
-        border-radius: 4px;
+        background: var(--terminal-black);
+        border: 1px solid var(--terminal-border);
     }
     
     ::-webkit-scrollbar-thumb {
-        background: #3a4152;
-        border-radius: 4px;
+        background: linear-gradient(135deg, var(--terminal-orange) 0%, var(--terminal-amber) 100%);
+        border-radius: 0px;
+        border: 1px solid var(--terminal-border);
     }
     
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, var(--terminal-cyan) 0%, var(--terminal-blue) 100%);
+    }
+    
+    /* PROFESSIONAL ALERTS */
+    .terminal-alert {
+        border-left: 4px solid;
+        background: linear-gradient(135deg, var(--terminal-panel) 0%, var(--terminal-black) 100%);
+        padding: 12px 16px;
+        margin: 8px 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .terminal-alert.success {
+        border-left-color: var(--terminal-green);
+        background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, var(--terminal-black) 100%);
+        color: var(--terminal-green);
+    }
+    
+    .terminal-alert.error {
+        border-left-color: var(--terminal-red);
+        background: linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, var(--terminal-black) 100%);
+        color: var(--terminal-red);
+    }
+    
+    .terminal-alert.warning {
+        border-left-color: var(--terminal-amber);
+        background: linear-gradient(135deg, rgba(255, 165, 0, 0.1) 0%, var(--terminal-black) 100%);
+        color: var(--terminal-amber);
+    }
+    
+    /* BLOOMBERG TERMINAL DEPLOYMENT NOTICE */
     .deployment-notice {
-        background: linear-gradient(135deg, #0066cc 0%, #00d4aa 100%);
-        color: white;
-        padding: 16px;
-        border-radius: 8px;
+        background: linear-gradient(135deg, var(--terminal-orange) 0%, var(--terminal-amber) 100%);
+        color: var(--terminal-black);
+        padding: 16px 24px;
         margin: 16px 0;
         text-align: center;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        border: 2px solid var(--terminal-orange);
+    }
+    
+    /* PROFESSIONAL LOADING STATES */
+    .loading-spinner {
+        color: var(--terminal-cyan);
+        font-family: 'JetBrains Mono', monospace;
         font-weight: 600;
-        box-shadow: 0 4px 8px rgba(0, 102, 204, 0.3);
+        animation: terminal-pulse 1.5s infinite;
+    }
+    
+    .loading-dots::after {
+        content: '...';
+        animation: loading-dots 1.5s infinite;
+    }
+    
+    @keyframes loading-dots {
+        0%, 33% { content: '.'; }
+        34%, 66% { content: '..'; }
+        67%, 100% { content: '...'; }
+    }
+    
+    /* PROFESSIONAL TERMINAL SELECTION */
+    ::selection {
+        background: rgba(0, 212, 255, 0.3);
+        color: var(--terminal-text);
+    }
+    
+    ::-moz-selection {
+        background: rgba(0, 212, 255, 0.3);
+        color: var(--terminal-text);
+    }
+    
+    /* PROFESSIONAL MEDIA QUERIES */
+    @media (max-width: 768px) {
+        .terminal-title {
+            font-size: 24px;
+        }
+        
+        .metric-card {
+            padding: 1rem;
+        }
+        
+        .metric-value {
+            font-size: 20px;
+        }
     }
 </style>
 """
 
-st.markdown(BLOOMBERG_CSS, unsafe_allow_html=True)
+st.markdown(BLOOMBERG_TERMINAL_CSS, unsafe_allow_html=True)
 
 # Utility functions
 @st.cache_data(ttl=300)  # Cache for 5 minutes
