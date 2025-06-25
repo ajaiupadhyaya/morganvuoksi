@@ -18,6 +18,9 @@ from ray.tune.schedulers import ASHAScheduler
 import cvxpy as cp
 import riskfolio as rp
 from prometheus_client import start_http_server, Counter, Gauge, Histogram
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce
 
 from ..utils.logging import setup_logger
 from ..config import get_config
@@ -70,11 +73,10 @@ class TradingInfrastructure:
         
         # Alpaca
         if 'alpaca' in self.config:
-            import alpaca_trade_api as tradeapi
-            self.alpaca = tradeapi.REST(
+            self.alpaca = TradingClient(
                 self.config['alpaca']['api_key'],
                 self.config['alpaca']['api_secret'],
-                base_url=self.config['alpaca']['base_url']
+                paper=True if 'paper' in self.config['alpaca'] and self.config['alpaca']['paper'] else False
             )
     
     def _setup_metrics(self):
@@ -174,14 +176,15 @@ class TradingInfrastructure:
                 }
             
             elif order['broker'] == 'alpaca':
-                # Submit Alpaca order
-                response = self.alpaca.submit_order(
+                # Submit Alpaca order using new alpaca-py API
+                order_request = MarketOrderRequest(
                     symbol=order['symbol'],
                     qty=order['quantity'],
-                    side=order['action'],
-                    type='market',
-                    time_in_force='day'
+                    side=OrderSide.BUY if order['action'] == 'buy' else OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY
                 )
+                
+                response = self.alpaca.submit_order(order_request)
                 
                 # Calculate latency
                 latency = (datetime.now() - start_time).total_seconds()
