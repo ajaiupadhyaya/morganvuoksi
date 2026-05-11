@@ -16,7 +16,7 @@ scikit-learn>=1.3.0
 xgboost>=1.7.0
 tensorflow>=2.13.0
 torch>=2.0.0
-transformers>=4.30.0
+transformers>=5.0.0rc3
 
 # Financial libraries
 yfinance>=0.2.18
@@ -28,8 +28,8 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 
 # API and web services
-requests>=2.31.0
-aiohttp>=3.8.0
+requests>=2.33.0
+aiohttp>=3.13.4
 
 # Database and caching
 redis>=4.6.0
@@ -37,11 +37,11 @@ sqlalchemy>=2.0.0
 
 # Configuration and logging
 pyyaml>=6.0
-python-dotenv>=1.0.0
+python-dotenv>=1.2.2
 
 # Development and testing
 pytest>=7.4.0
-black>=23.0.0
+black>=26.3.1
 flake8>=6.0.0
 
 # Optional: GPU acceleration
