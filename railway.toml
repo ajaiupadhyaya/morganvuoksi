@@ -1,0 +1,32 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python startup.py"
+healthcheckPath = "/_stcore/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+STREAMLIT_SERVER_PORT = { default = "$PORT" }
+STREAMLIT_SERVER_ADDRESS = { default = "0.0.0.0" }
+STREAMLIT_SERVER_HEADLESS = { default = "true" }
+STREAMLIT_SERVER_ENABLE_CORS = { default = "false" }
+STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION = { default = "false" }
+PYTHONUNBUFFERED = { default = "1" }
+PYTHONDONTWRITEBYTECODE = { default = "1" }
+LOG_LEVEL = { default = "INFO" }
+ENVIRONMENT = { default = "production" }
+
+# Performance optimizations
+OMP_NUM_THREADS = { default = "4" }
+MKL_NUM_THREADS = { default = "4" }
+NUMEXPR_NUM_THREADS = { default = "4" }
+
+# Streamlit optimizations for Railway
+STREAMLIT_BROWSER_GATHER_USAGE_STATS = { default = "false" }
+STREAMLIT_SERVER_FILE_WATCHER_TYPE = { default = "none" }
+STREAMLIT_SERVER_MAX_UPLOAD_SIZE = { default = "200" }
+STREAMLIT_SERVER_ENABLE_STATIC_SERVING = { default = "true" } 

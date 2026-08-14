@@ -2,13 +2,32 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile"
+    "dockerfilePath": "Dockerfile",
+    "buildCommand": "python startup.py --check && echo 'Dependencies verified'",
+    "watchPatterns": ["src/**", "dashboard/**", "requirements-railway.txt"]
   },
   "deploy": {
-    "startCommand": "streamlit run dashboard/terminal.py --server.port=$PORT --server.address=0.0.0.0",
+    "startCommand": "python startup.py",
     "healthcheckPath": "/_stcore/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "restartPolicyMaxRetries": 10,
+    "numReplicas": 1,
+    "sleepApplication": false
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "STREAMLIT_SERVER_PORT": "$PORT",
+        "STREAMLIT_SERVER_ADDRESS": "0.0.0.0",
+        "STREAMLIT_SERVER_HEADLESS": "true",
+        "STREAMLIT_SERVER_ENABLE_CORS": "false",
+        "STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION": "false",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "LOG_LEVEL": "INFO",
+        "ENVIRONMENT": "production"
+      }
+    }
   }
 } 
